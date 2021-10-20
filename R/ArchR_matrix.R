@@ -3,7 +3,6 @@
 ## Author: Zepeng Mu
 ###############################################################################
 
-
 #' Get mean matrix for each group from an ArchR project
 #'
 #' @param proj An ArchR project
@@ -64,7 +63,18 @@ getSumMtrx <- function(proj = NULL,
   return(sumMtrx)
 }
 
-# Get Non-zero proportion from ArchR ----
+#' Get Non-zero proportion from ArchR project
+#'
+#' @param proj An ArchR project
+#' @param name Name of matrix to use, default is GeneScoreMatrix
+#' @param groupBy The variable in cellColData used to group cells, default is Clusters
+#' @param useSeqnames Chromosomes to include in output matrix, default is chr1-22 and chrX
+#' @param threads Number of threads to use, default is 4
+#'
+#' @return
+#' @export
+#'
+#' @examples
 getNonZeroProp <- function(proj = NULL,
                            name = "GeneScoreMatrix",
                            groupBy = "Clusters",
