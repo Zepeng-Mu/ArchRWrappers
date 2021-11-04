@@ -142,6 +142,7 @@ ArchR2sce <- function(
     assayList,
     colData = colData(matrix),
     rowData = rowData(matrix),
+    rowRanges = rowRanges(matrix),
     reducedDims = rdList
   )
   
