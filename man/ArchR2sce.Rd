@@ -12,9 +12,11 @@ ArchR2sce(
   targetAssay = "count",
   addLog = F,
   scaleTo = 10000,
-  targetAssayLog = ifelse(addLog = T, paste0("log", targetAssay)),
-  reducedDims = c("IterativeLSI", "UMAP"),
+  targetAssayLog = ifelse(addLog = T, paste0("log", targetAssay), NULL),
+  reducedDims = c("IterativeLSI", "Harmony"),
   scaleDims = c(T, T),
+  embeddings = "UMAP",
+  useRowData = F,
   threads = 4
 )
 }
@@ -38,6 +40,10 @@ ArchR2sce(
 \item{reducedDims}{}
 
 \item{scaleDims}{}
+
+\item{embeddings}{}
+
+\item{useRowData}{}
 
 \item{threads}{}
 }

@@ -97,6 +97,8 @@ addAnyReducedMtrx <- function(ArchRProj, name = "myReduced", matrix = NULL) {
 #' @param reducedDims 
 #' @param scaleDims 
 #' @param threads 
+#' @param embeddings 
+#' @param useRowData 
 #'
 #' @importFrom SingleCellExperiment SingleCellExperiment
 #' @return
