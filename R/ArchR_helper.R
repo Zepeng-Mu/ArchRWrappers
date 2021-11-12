@@ -15,7 +15,7 @@
 #' @param k 
 #' @param dimsToUse Dimensions to use in reducedMNN
 #' @param ... Other parameters for reducedMNN
-#'
+#' 
 #' @return
 #' @export
 #'
@@ -98,6 +98,7 @@ addAnyReducedMtrx <- function(ArchRProj, name = "myReduced", matrix = NULL) {
 #' @param scaleDims 
 #' @param threads 
 #'
+#' @importFrom SingleCellExperiment SingleCellExperiment
 #' @return
 #' @export
 #'
@@ -110,41 +111,64 @@ ArchR2sce <- function(
   targetAssay = "count",
   addLog = F,
   scaleTo = 1e4,
-  targetAssayLog = ifelse(addLog = T, paste0("log", targetAssay)),
-  reducedDims = c("IterativeLSI", "UMAP"),
+  targetAssayLog = ifelse(addLog = T, paste0("log", targetAssay), NULL),
+  reducedDims = c("IterativeLSI", "Harmony"),
   scaleDims = c(T, T),
+  embeddings = "UMAP",
+  useRowData = F,
   threads = 4
 ) {
-  cat(str_glue("Getting {matrix} from {ArchRProj}...\n\n"))
-  matrix <- getMatrixFromProject(ArchRProj, useMatrix = matrix,
+  cat(str_glue("Getting {matrix} from ArchR project...\n\n"))
+  projMtrx <- getMatrixFromProject(ArchRProj, useMatrix = matrix,
                                  useSeqnames = useSeqnames,
                                  binarize = binarize, threads = threads)
   
-  matrixAssay <- assay(matrix)
+  matrixAssay <- assay(projMtrx)
   if (addLog) {
-    matrixAssayLog <- scale(matrixAssay, center = F,
-                            scale = sparseMatrixStats::colSums2(matrixAssay))
+    matrixAssayLog <- apply(matrixAssay, 2, function(x) x / sum(x) * scaleTo)
     matrixAssayLog <- log2(matrixAssayLog + 1)
     
     assayList <- list(matrixAssay, matrixAssayLog)
     names(assayList) <- c(targetAssay, targetAssayLog)
   } else {
-    assayList <- list(assay(matrix))
+    assayList <- list(assay(projMtrx))
     names(assayList) <- targetAssay
   }
   
   rdList <- lapply(1:length(reducedDims), function(rd) {
-    getReducedDims(ArchRProj, reducedDims = reducedDims[rd], scaleDims = scaleDims[rd])
+    tmpRd <- getReducedDims(ArchRProj, reducedDims = reducedDims[rd], scaleDims = scaleDims[rd])
+    tmpRd <- tmpRd[colnames(matrixAssay), ]
+    return(tmpRd)
   })
   
   names(rdList) <- reducedDims
-  outSce <- SingleCellExperiment(
-    assayList,
-    colData = colData(matrix),
-    rowData = rowData(matrix),
-    rowRanges = rowRanges(matrix),
-    reducedDims = rdList
-  )
+  
+  embList <- lapply(1:length(embeddings), function(emb) {
+    tmpEmb <- getEmbedding(ArchRProj, embedding = embeddings[emb], returnDF = T)
+    tmpEmb <- tmpEmb[colnames(matrixAssay), ]
+    return(as.matrix(tmpEmb))
+  })
+  
+  names(embList) <- embeddings
+  rdList <- append(rdList, embList)
+  
+  if (useRowData) {
+    outSce <- SingleCellExperiment(
+      assays = assayList,
+      colData = colData(projMtrx),
+      rowData = rowData(projMtrx),
+      reducedDims = rdList
+    )
+  } else {
+    rr <- rowRanges(projMtrx)
+    names(rr) <- str_glue("{seqnames(rr)}_{start(rr)}-{end(rr)}")
+    outSce <- SingleCellExperiment(
+      assays = assayList,
+      colData = colData(projMtrx),
+      rowRanges = rr,
+      reducedDims = rdList
+    )
+  }
   
   return(outSce)
 }
