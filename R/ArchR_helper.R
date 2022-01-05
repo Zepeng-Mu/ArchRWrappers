@@ -22,7 +22,7 @@
 #' @examples
 addReducedMNN <- function(ArchRProj,
                           corCutOff = 0.5,
-                          reducedDims = "IterativeorigRedDim",
+                          reducedDims = "IterativeLSI",
                           name = "reducedMNN",
                           scaleDims = T,
                           scaleDimsAfter = NA,
@@ -39,6 +39,18 @@ addReducedMNN <- function(ArchRProj,
     scaleDims = scaleDims
   )
   
+  origRedDimObj <- getReducedDims(
+    ArchRProj,
+    corCutOff = corCutOff,
+    reducedDims = reducedDims,
+    dimsToUse = dimsToUse,
+    scaleDims = scaleDims,
+    returnMatrix = F
+  )
+  
+  
+  rDFeatures <- rD[[grep("Features", names(rD))]]
+  
   cat("Performing reducedMNN...\n")
   redMnnRes <- batchelor::reducedMNN(
     origRedDim,
@@ -53,7 +65,9 @@ addReducedMNN <- function(ArchRProj,
     params = NA,
     date = Sys.time(),
     scaleDims = scaleDimsAfter,
-    corToDepth = NA
+    corToDepth = NA,
+    Features = rDFeatures,
+    tileSize = 500
   )
   
   return(ArchRProj)
@@ -111,9 +125,7 @@ ArchR2sce <- function(
   useSeqnames = c("chr"%&%1:22, "chrX"),
   binarize = F,
   targetAssay = "count",
-  addLog = F,
   scaleTo = 1e4,
-  targetAssayLog = ifelse(addLog = T, paste0("log", targetAssay), NULL),
   reducedDims = c("IterativeLSI", "Harmony"),
   scaleDims = c(T, T),
   embeddings = "UMAP",
@@ -125,17 +137,8 @@ ArchR2sce <- function(
                                  useSeqnames = useSeqnames,
                                  binarize = binarize, threads = threads)
   
-  matrixAssay <- assay(projMtrx)
-  if (addLog) {
-    matrixAssayLog <- apply(matrixAssay, 2, function(x) x / sum(x) * scaleTo)
-    matrixAssayLog <- log2(matrixAssayLog + 1)
-    
-    assayList <- list(matrixAssay, matrixAssayLog)
-    names(assayList) <- c(targetAssay, targetAssayLog)
-  } else {
-    assayList <- list(assay(projMtrx))
-    names(assayList) <- targetAssay
-  }
+  assayList <- list(assay(projMtrx))
+  names(assayList) <- targetAssay
   
   rdList <- lapply(1:length(reducedDims), function(rd) {
     tmpRd <- getReducedDims(ArchRProj, reducedDims = reducedDims[rd], scaleDims = scaleDims[rd])
