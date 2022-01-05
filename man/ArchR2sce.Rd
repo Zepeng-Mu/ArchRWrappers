@@ -10,9 +10,7 @@ ArchR2sce(
   useSeqnames = c("chr" \%&\% 1:22, "chrX"),
   binarize = F,
   targetAssay = "count",
-  addLog = F,
   scaleTo = 10000,
-  targetAssayLog = ifelse(addLog = T, paste0("log", targetAssay), NULL),
   reducedDims = c("IterativeLSI", "Harmony"),
   scaleDims = c(T, T),
   embeddings = "UMAP",
@@ -31,11 +29,7 @@ ArchR2sce(
 
 \item{targetAssay}{}
 
-\item{addLog}{}
-
 \item{scaleTo}{}
-
-\item{targetAssayLog}{}
 
 \item{reducedDims}{}
 
@@ -46,6 +40,10 @@ ArchR2sce(
 \item{useRowData}{}
 
 \item{threads}{}
+
+\item{addLog}{}
+
+\item{targetAssayLog}{}
 }
 \value{
 

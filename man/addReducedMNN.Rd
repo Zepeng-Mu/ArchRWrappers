@@ -7,7 +7,7 @@
 addReducedMNN(
   ArchRProj,
   corCutOff = 0.5,
-  reducedDims = "IterativeorigRedDim",
+  reducedDims = "IterativeLSI",
   name = "reducedMNN",
   scaleDims = T,
   scaleDimsAfter = NA,

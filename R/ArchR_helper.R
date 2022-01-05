@@ -49,7 +49,7 @@ addReducedMNN <- function(ArchRProj,
   )
   
   
-  rDFeatures <- rD[[grep("Features", names(rD))]]
+  origFeatures <- origRedDimObj[[grep("Features", names(origRedDimObj))]]
   
   cat("Performing reducedMNN...\n")
   redMnnRes <- batchelor::reducedMNN(
@@ -66,7 +66,7 @@ addReducedMNN <- function(ArchRProj,
     date = Sys.time(),
     scaleDims = scaleDimsAfter,
     corToDepth = NA,
-    Features = rDFeatures,
+    Features = origFeatures,
     tileSize = 500
   )
   
