@@ -8,10 +8,9 @@
 #' per cell and then infer gene topic scores.
 #' This function is adapted from `addGeneScoreMatrix` function from the  `ArchR` package.
 #'
-#' @param input An `ArchRProject` object or character vector of ArrowFiles.
 #' @param genes A stranded `GRanges` object containing the ranges associated with all gene start and end coordinates. 
 #' @param peaks A `GRanges` object containing the peaks with a `score` column to calculate gene-level scores. 
-#' @param stats Either `mean` or `sum` to determine wether to take the mean or sum of all peak scores for each gene.
+#' @param scoreMat 
 #' @param geneModel A string giving a "gene model function" used for weighting peaks for gene score calculation. This string
 #' should be a function of `x`, where `x` is the stranded distance from the transcription start site of the gene. 
 #' @param matrixName The name to be used for storage of the gene activity score matrix in the provided `ArchRProject` or ArrowFiles.
@@ -29,138 +28,25 @@
 #' @param useTSS A boolean describing whether to build gene model based on gene TSS or the gene body.
 #' @param extendTSS A boolean describing whether to extend the gene TSS. By default useTSS uses the 1bp TSS while this parameter enables the extension of this
 #' region with 'geneUpstream' and 'geneDownstream' respectively.
-#' @param tileSize The size of the tiles used for binning counts prior to gene activity score calculation.
-#' @param ceiling The maximum counts per tile allowed. This is used to prevent large biases in tile counts.
 #' @param geneScaleFactor A numeric scaling factor to weight genes based on the inverse of there length i.e. [(Scale Factor)/(Gene Length)]. This
 #' is scaled from 1 to the scale factor. Small genes will be the scale factor while extremely large genes will be closer to 1. This scaling helps with
 #' the relative gene score value.
-#' @param scaleTo Each column in the calculated gene score matrix will be normalized to a column sum designated by `scaleTo`.
 #' @param excludeChr A character vector containing the `seqnames` of the chromosomes that should be excluded from this analysis.
 #' @param blacklist A `GRanges` object containing genomic regions to blacklist that may be extremeley over-represented and thus
 #' biasing the geneScores for genes nearby that locus.
-#' @param threads The number of threads to be used for parallel computing.
-#' @param parallelParam A list of parameters to be passed for biocparallel/batchtools parallel computing.
-#' @param subThreading A boolean determining whether possible use threads within each multi-threaded subprocess if greater than the number of input samples.
 #' @param force A boolean value indicating whether to force the matrix indicated by `matrixName` to be overwritten if it already exist in the given `input`.
+#' @param subThreads 
+#' @param tstart 
 #' @param logFile The path to a file to be used for logging ArchR output.
+#'
 #' @export
 addTopicScoreMatrix <- function(
-  input = NULL,
-  peaks = NULL,
-  genes = getGenes(input),
-  geneModel = "exp(-abs(x)/5000) + exp(-1)",
-  matrixName = "TopicScoreMatrix",
-  extendUpstream = c(1000, 100000),
-  extendDownstream = c(1000, 100000),
-  geneUpstream = 5000, #New Param
-  geneDownstream = 0, #New Param
-  useGeneBoundaries = TRUE,
-  useTSS = FALSE, #New Param
-  extendTSS = FALSE,
-  tileSize = 500,
-  ceiling = 4,
-  geneScaleFactor = 5, #New Param
-  scaleTo = 10000, # This may be useless
-  excludeChr = c("chrY", "chrM"),
-  blacklist = getBlacklist(input),
-  threads = getArchRThreads(),
-  parallelParam = NULL,
-  subThreading = TRUE,
-  force = FALSE,
-  logFile = createLogFile("addTopicScoreMatrix") # keep this unchanged for now
-){
-  
-  .validInput(input = input, name = "input", valid = c("ArchRProj", "character"))
-  .validInput(input = genes, name = "genes", valid = c("GRanges"))
-  .validInput(input = peaks, name = "genes", valid = c("GRanges"))
-  .validInput(input = stats, name = "stats", valid = c("character"))
-  .validInput(input = geneModel, name = "geneModel", valid = c("character"))
-  .validInput(input = matrixName, name = "matrixName", valid = c("character"))
-  .validInput(input = extendUpstream, name = "extendUpstream", valid = c("integer"))
-  .validInput(input = extendDownstream, name = "extendDownstream", valid = c("integer"))
-  .validInput(input = tileSize, name = "tileSize", valid = c("integer"))
-  .validInput(input = ceiling, name = "ceiling", valid = c("integer"))
-  .validInput(input = useGeneBoundaries, name = "useGeneBoundaries", valid = c("boolean"))
-  .validInput(input = scaleTo, name = "scaleTo", valid = c("numeric"))
-  .validInput(input = excludeChr, name = "excludeChr", valid = c("character", "null"))
-  .validInput(input = blacklist, name = "blacklist", valid = c("GRanges", "null"))
-  .validInput(input = threads, name = "threads", valid = c("integer"))
-  .validInput(input = parallelParam, name = "parallelParam", valid = c("parallelparam", "null"))
-  .validInput(input = force, name = "force", valid = c("boolean"))
-  .validInput(input = logFile, name = "logFile", valid = c("character"))
-  
-  matrixName <- .isProtectedArray(matrixName, exclude = "TopicScoreMatrix")
-  
-  if(inherits(input, "ArchRProject")){
-    ArrowFiles <- getArrowFiles(input)
-    allCells <- rownames(getCellColData(input))
-    outDir <- getOutputDirectory(input)
-  }else if(inherits(input, "character")){
-    outDir <- ""
-    ArrowFiles <- input
-    allCells <- NULL
-  }else{
-    stop("Error Unrecognized Input!")
-  }
-  if(!all(file.exists(ArrowFiles))){
-    stop("Error Input Arrow Files do not all exist!")
-  }
-  
-  if(inherits(mcols(genes)$symbol, "list") | inherits(mcols(genes)$symbol, "SimpleList")){
-    stop("Found a list in genes symbol! This is an incorrect format. Please correct your genes!")
-  }
-  
-  .startLogging(logFile = logFile)
-  .logThis(mget(names(formals()),sys.frame(sys.nframe())), "addTopicScoreMatrix Input-Parameters", logFile = logFile)
-  
-  #Valid GRanges
-  genes <- .validGRanges(genes)
-  
-  #Add args to list
-  args <- mget(names(formals()),sys.frame(sys.nframe()))#as.list(match.call())
-  args$ArrowFiles <- ArrowFiles
-  args$allCells <- allCells
-  args$X <- seq_along(ArrowFiles)
-  args$FUN <- .addGeneScoreMat
-  args$registryDir <- file.path(outDir, "GeneScoresRegistry")
-  args$logFile <- logFile
-  
-  if(subThreading){
-    h5disableFileLocking()
-  }else{
-    args$threads <- length(inputFiles)
-  }
-  
-  #Remove Input from args
-  args$input <- NULL
-  
-  #Run With Parallel or lapply
-  outList <- .batchlapply(args)
-  
-  if(subThreading){
-    h5enableFileLocking()
-  }
-  
-  .endLogging(logFile = logFile)
-  
-  if(inherits(input, "ArchRProject")){
-    
-    return(input)
-    
-  }else{
-    
-    return(unlist(outList))
-    
-  }
-  
-}
-
-.addGeneScoreMat <- function(
-  i = NULL,
-  ArrowFiles = NULL,
   genes = NULL,
+  peaks = NULL,
+  scoreMat = NULL,
   geneModel = "exp(-abs(x)/5000) + exp(-1)",
-  matrixName = "TopicScoreMatrix",
+  peakWidth = 500,
+  matrixName = "TopicScoreMatrix", # not needed
   extendUpstream = c(1000, 100000),
   extendDownstream = c(1000, 100000),
   geneUpstream = 5000, #New Param
@@ -168,53 +54,28 @@ addTopicScoreMatrix <- function(
   useGeneBoundaries = TRUE,
   useTSS = FALSE, #New Param
   extendTSS = FALSE,
-  tileSize = 500,
-  ceiling = 4,
   geneScaleFactor = 5, #New Param
-  scaleTo = 10000,
   excludeChr = c("chrY","chrM"),
   blacklist = NULL,
-  cellNames = NULL,
-  allCells = NULL,
-  force = FALSE,
   tmpFile = NULL,
   subThreads = 1,
   tstart = NULL,
   logFile = NULL
 ){
   
-  .validInput(input = i, name = "i", valid = c("integer"))
-  .validInput(input = ArrowFiles, name = "ArrowFiles", valid = c("character"))
-  .validInput(input = genes, name = "genes", valid = c("GRanges"))
-  .validInput(input = geneModel, name = "geneModel", valid = c("character"))
-  .validInput(input = matrixName, name = "matrixName", valid = c("character"))
-  .validInput(input = extendUpstream, name = "extendUpstream", valid = c("integer"))
-  .validInput(input = extendDownstream, name = "extendDownstream", valid = c("integer"))
-  .validInput(input = tileSize, name = "tileSize", valid = c("integer"))
-  .validInput(input = ceiling, name = "ceiling", valid = c("integer"))
-  .validInput(input = useGeneBoundaries, name = "useGeneBoundaries", valid = c("boolean"))
-  .validInput(input = scaleTo, name = "scaleTo", valid = c("numeric"))
-  .validInput(input = excludeChr, name = "excludeChr", valid = c("character", "null"))
-  .validInput(input = blacklist, name = "blacklist", valid = c("GRanges", "null"))
-  .validInput(input = cellNames, name = "cellNames", valid = c("character", "null"))
-  .validInput(input = allCells, name = "allCells", valid = c("character", "null"))
-  .validInput(input = force, name = "force", valid = c("boolean"))
-  .validInput(input = tmpFile, name = "tmpFile", valid = c("character", "null"))
+  ArchR:::.validInput(input = genes, name = "genes", valid = c("GRanges"))
+  ArchR:::.validInput(input = peaks, name = "peaks", valid = c("GRanges"))
+  ArchR:::.validInput(input = scoreMat, name = "scoreMat", valid = c("matrix"))
+  ArchR:::.validInput(input = geneModel, name = "geneModel", valid = c("character"))
+  ArchR:::.validInput(input = extendUpstream, name = "extendUpstream", valid = c("integer"))
+  ArchR:::.validInput(input = extendDownstream, name = "extendDownstream", valid = c("integer"))
+  ArchR:::.validInput(input = useGeneBoundaries, name = "useGeneBoundaries", valid = c("boolean"))
+  ArchR:::.validInput(input = excludeChr, name = "excludeChr", valid = c("character", "null"))
+  ArchR:::.validInput(input = blacklist, name = "blacklist", valid = c("GRanges", "null"))
   
   if(inherits(mcols(genes)$symbol, "list") | inherits(mcols(genes)$symbol, "SimpleList")){
     stop("Found a list in genes symbol! This is an incorrect format. Please correct your genes!")
   }
-  
-  ArrowFile <- ArrowFiles[i]
-  sampleName <- .sampleName(ArrowFile)
-  
-  if(is.null(tmpFile)){
-    tmpFile <- .tempfile(pattern = paste0("tmp-", .sampleName(ArrowFile)))
-  }
-  
-  #Check
-  o <- h5closeAll()
-  o <- .createArrowGroup(ArrowFile = ArrowFile, group = matrixName, force = force, logFile = logFile)
   
   geneRegions <- genes[BiocGenerics::which(seqnames(genes) %bcni% excludeChr)]
   seqlevels(geneRegions) <- as.character(unique(seqnames(geneRegions)))
@@ -222,7 +83,6 @@ addTopicScoreMatrix <- function(
   
   #Create Gene Regions Then Remove Strand Column
   if(useTSS){
-    .logMessage(paste0(sampleName, " .addGeneScoreMat useTSS = TRUE"))
     distMethod <- "GenePromoter"
     geneRegions$geneStart <- start(resize(geneRegions, 1, "start"))
     geneRegions$geneEnd <- start(resize(geneRegions, 1, "end"))
@@ -232,7 +92,6 @@ addTopicScoreMatrix <- function(
     }
     geneRegions$geneWeight <- geneScaleFactor
   }else{
-    .logMessage(paste0(sampleName, " .addGeneScoreMat useTSS = FALSE"))
     distMethod <- "GeneBody"
     geneRegions$geneStart <- start(resize(geneRegions, 1, "start"))
     geneRegions$geneEnd <- start(resize(geneRegions, 1, "end"))
@@ -241,11 +100,8 @@ addTopicScoreMatrix <- function(
     geneRegions$geneWeight <- 1 + m * (geneScaleFactor - 1) / (max(m) - min(m))
   }
   
-  .logDiffTime(sprintf("Computing Gene Scores using distance relative to %s! ", distMethod), tstart, logFile = logFile)
-  
   #Add Gene Index For ArrowFile
   geneRegions <- sort(sortSeqlevels(geneRegions), ignore.strand = TRUE)
-  .logThis(geneRegions, paste0(sampleName, " .addGeneScoreMat geneRegions"), logFile = logFile)
   
   geneRegions <- split(geneRegions, seqnames(geneRegions))
   geneRegions <- lapply(geneRegions, function(x){
@@ -260,62 +116,20 @@ addTopicScoreMatrix <- function(
     }
   }
   
-  #Get all cell ids before constructing matrix
-  if(is.null(cellNames)){
-    cellNames <- .availableCells(ArrowFile)
-  }
-  
-  if(!is.null(allCells)){
-    cellNames <- cellNames[cellNames %in% allCells]
-  }
-  
-  tstart <- Sys.time()
-  
-  
-  #########################################################################################################
-  #First we will write gene scores to a temporary path! rhdf5 delete doesnt actually delete the memory!
-  #########################################################################################################
-  totalGS <- .safelapply(seq_along(geneRegions), function(z){
-    
-    totalGSz <- tryCatch({
-      
-      .logDiffTime(sprintf("Creating Temp TopicScoreMatrix for %s, Chr (%s of %s)!", sampleName, z, length(geneRegions)), 
-                   tstart, verbose = FALSE, logFile = logFile)
-      
+  outMat <- ArchR:::.safelapply(seq_along(geneRegions), function(z){
+    chrOutMat <- tryCatch({
       #Get Gene Starts
       geneRegionz <- geneRegions[[z]]
       geneRegionz <- geneRegionz[order(geneRegionz$idx)]
       chrz <- paste0(unique(seqnames(geneRegionz)))
       
-      #Read in Fragments
-      frag <- .getFragsFromArrow(ArrowFile, chr = chrz, out = "IRanges", cellNames = cellNames)
-      fragSt <- trunc(start(frag)/tileSize) * tileSize
-      fragEd <- trunc(end(frag)/tileSize) * tileSize
-      fragBC <- rep(S4Vectors::match(mcols(frag)$RG, cellNames), 2)
-      rm(frag)
+      # Peaks by Chr
+      chrPeaks <- peaks[seqnames(peaks) == chrz]
+      
       gc()
       
-      #Unique Inserts
-      uniqIns <- sort(unique(c(fragSt,fragEd)))
-      
-      #Construct tile by cell mat!
-      matGS <- Matrix::sparseMatrix(
-        i = match(c(fragSt, fragEd), uniqIns),
-        j = as.vector(fragBC),
-        x = rep(1,  2*length(fragSt)),
-        dims = c(length(uniqIns), length(cellNames))
-      )  
-      
-      if(!is.null(ceiling)){
-        matGS@x[matGS@x > ceiling] <- ceiling
-      }
-      
-      #Unique Tiles
-      uniqueTiles <- IRanges(start = uniqIns, width = tileSize)
-      
-      #Clean Memory
-      rm(uniqIns, fragSt, fragEd, fragBC)
-      gc() 
+      # Get peak by K matrix
+      chrScoreMat <- scoreMat[chrPeaks$name, ]
       
       #Time to Overlap Gene Windows
       if(useGeneBoundaries){
@@ -346,14 +160,14 @@ addTopicScoreMatrix <- function(
         
         #Start of Range is based on the max observed gene ranged <- direction
         s <- pmax(
-          c(1, pmaxGene[-length(pmaxGene)] + tileSize), 
+          c(1, pmaxGene[-length(pmaxGene)] + peakWidth), 
           pminGene - pReverse
         )
         s <- pmin(pminGene - pReverseMin, s)
         
         #End of Range is based on the max observed gene ranged -> direction
         e <- pmin(
-          c(pminGene[-1] - tileSize, pmaxGene[length(pmaxGene)] + pForward[length(pmaxGene)]), 
+          c(pminGene[-1] - peakWidth, pmaxGene[length(pmaxGene)] + pForward[length(pmaxGene)]), 
           pmaxGene + pForward
         )
         e <- pmax(pmaxGene + pForwardMin, e)
@@ -378,19 +192,19 @@ addTopicScoreMatrix <- function(
         
       }
       
-      tmp <- suppressWarnings(findOverlaps(extendedGeneRegion, uniqueTiles))
-      x <- distance(ranges(geneRegionz)[queryHits(tmp)], uniqueTiles[subjectHits(tmp)])
+      tmp <- suppressWarnings(IRanges::findOverlaps(extendedGeneRegion, ranges(chrPeaks)))
+      x <- distance(geneRegionz[queryHits(tmp)], chrPeaks[subjectHits(tmp)])
       
       #Determine Sign for Distance relative to strand (Directionality determined based on dist from gene start)
       isMinus <- BiocGenerics::which(strand(geneRegionz) == "-")
-      signDist <- sign(start(uniqueTiles)[subjectHits(tmp)] - start(resize(geneRegionz,1,"start"))[queryHits(tmp)])
+      signDist <- sign(start(chrPeaks)[subjectHits(tmp)] - start(resize(geneRegionz,1,"start"))[queryHits(tmp)])
       signDist[isMinus] <- signDist[isMinus] * -1
       
       #Correct the orientation for the distance!
       x <- x * signDist
       
       #Evaluate Input Model
-      x <- eval(parse(text=geneModel))
+      x <- eval(parse(text = geneModel))
       
       #Get Gene Weights Related to Gene Width
       x <- x * mcols(geneRegionz)$geneWeight[queryHits(tmp)]
@@ -400,9 +214,9 @@ addTopicScoreMatrix <- function(
         if(length(blacklist) > 0){
           blacklistz <- blacklist[[chrz]]
           if(is.null(blacklistz) | length(blacklistz) > 0){
-            tilesBlacklist <- 1 * (!overlapsAny(uniqueTiles, ranges(blacklistz)))
-            if(sum(tilesBlacklist == 0) > 0){
-              x <- x * tilesBlacklist[subjectHits(tmp)] #Multiply Such That All Blacklisted Tiles weight is now 0!
+            peaksBlacklist <- 1 * (!overlapsAny(chrPeaks, blacklistz))
+            if(sum(peaksBlacklist == 0) > 0){
+              x <- x * peaksBlacklist[subjectHits(tmp)] #Multiply Such That All Blacklisted Tiles weight is now 0!
             }
           }
         }
@@ -413,147 +227,37 @@ addTopicScoreMatrix <- function(
         i = queryHits(tmp), 
         j = subjectHits(tmp), 
         x = x, 
-        dims = c(length(geneRegionz), nrow(matGS))
+        dims = c(length(geneRegionz), nrow(chrScoreMat))
       )
       
       #Calculate Gene Scores
-      matGS <- tmp %*% matGS
-      colnames(matGS) <- cellNames
-      
-      totalGSz <- Matrix::colSums(matGS)
-      
-      #Save tmp file
-      .safeSaveRDS(matGS, file = paste0(tmpFile, "-", chrz, ".rds"), compress = FALSE)
+      chrScoreMat <- tmp %*% chrScoreMat
+      rownames(chrScoreMat) <- geneRegionz$symbol
       
       #Clean Memory
-      rm(isMinus, signDist, extendedGeneRegion, uniqueTiles)
-      rm(matGS, tmp)
+      rm(isMinus, signDist, extendedGeneRegion, chrPeaks, tmp)
       gc()
       
-      totalGSz
+      return(chrScoreMat)
       
     }, error = function(e){
       
       errorList <- list(
-        ArrowFile = ArrowFile,
         geneRegions = geneRegions,
         blacklist = blacklist,
         chr = chrz,
-        totalGSz = if(exists("totalGSz", inherits = FALSE)) totalGSz else "totalGSz",
-        matGS = if(exists("matGS", inherits = FALSE)) matGS else "matGS"
+        chrScoreMat = if(exists("chrScoreMat", inherits = FALSE)) chrScoreMat else "chrScoreMat"
       )
-      
-      .logError(e, fn = ".addGeneScoreMat TmpGS", info = sampleName, errorList = errorList, logFile = logFile)
-      
     })
     
-    totalGSz
+    return(chrScoreMat)
     
-  }, threads = subThreads) %>% Reduce("+", .)
-  
-  
-  #########################################################################################################
-  #Organize info for ArchR Arrow
-  #########################################################################################################
-  featureDF <- Reduce("c",geneRegions) %>% 
-    {data.frame(
-      row.names=NULL,
-      seqnames=as.character(seqnames(.)),
-      start=mcols(.)$geneStart,
-      end=mcols(.)$geneEnd,
-      strand=as.integer(strand(.)),
-      name=mcols(.)$symbol,
-      idx=mcols(.)$idx,
-      stringsAsFactors=FALSE)}
-  .logThis(featureDF, paste0(sampleName, " .addGeneScoreMat FeatureDF"), logFile = logFile)
-  
-  dfParams <- data.frame(
-    extendUpstream = extendUpstream,
-    extendDownstream = extendDownstream,
-    geneUpstream = extendUpstream,
-    geneDownstream = extendDownstream,
-    scaleTo = scaleTo,
-    tileSize = tileSize,
-    ceiling = ceiling,
-    geneModel = geneModel,
-    stringsAsFactors=FALSE
-  )
-  
-  ######################################
-  # Initialize SP Mat Group
-  ######################################
-  o <- .initializeMat(
-    ArrowFile = ArrowFile,
-    Group = matrixName,
-    Class = "double",
-    Units = "NormCounts",
-    cellNames = cellNames,
-    params = dfParams,
-    featureDF = featureDF,
-    force = TRUE
-  )
+  }, threads = subThreads) %>% Reduce(rbind, .)
   
   #Clean Memory
-  rm(dfParams, featureDF, genes)
+  rm(genes)
   gc()
   
-  #Normalize and add to Arrow File!
-  for(z in seq_along(geneRegions)){
-    
-    o <- tryCatch({
-      
-      #Get Chromosome
-      chrz <- paste0(unique(seqnames(geneRegions[[z]])))
-      
-      .logDiffTime(sprintf("Adding TopicScoreMatrix to %s for Chr (%s of %s)!", sampleName, z, length(geneRegions)), 
-                   tstart, verbose = FALSE, logFile = logFile)
-      
-      #Re-Create Matrix for that chromosome!
-      matGS <- readRDS(paste0(tmpFile, "-", chrz, ".rds"))
-      file.remove(paste0(tmpFile, "-", chrz, ".rds"))
-      
-      #Normalize
-      matGS@x <- as.numeric(scaleTo * matGS@x/rep.int(totalGS, Matrix::diff(matGS@p)))
-      
-      #Round to Reduce Digits After Final Normalization
-      matGS@x <- round(matGS@x, 3)
-      matGS <- Matrix::drop0(matGS)
-      
-      #Write sparseMatrix to Arrow File!
-      o <- .addMatToArrow(
-        mat = matGS, 
-        ArrowFile = ArrowFile, 
-        Group = paste0(matrixName, "/", chrz), 
-        binarize = FALSE,
-        addColSums = TRUE,
-        addRowSums = TRUE,
-        addRowVarsLog2 = TRUE #add for integration analyses
-      )
-      
-      #Clean Memory
-      rm(matGS)
-      
-      if(z %% 3 == 0 | z == length(geneRegions)){
-        gc()
-      }
-      
-    }, error = function(e){
-      
-      errorList <- list(
-        ArrowFile = ArrowFile,
-        geneRegions = geneRegions,
-        blacklist = blacklist,
-        chr = chrz,
-        mat = if(exists("mat", inherits = FALSE)) mat else "mat"
-      )
-      
-      .logError(e, fn = ".addGeneScoreMat AddToArrow", info = sampleName, errorList = errorList, logFile = logFile)
-      
-    })
-    
-  }
-  
-  return(ArrowFile)
+  return(outMat)
   
 }
-
