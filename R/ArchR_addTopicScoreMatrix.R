@@ -46,7 +46,7 @@ addTopicScoreMatrix <- function(
   scoreMat = NULL,
   geneModel = "exp(-abs(x)/5000) + exp(-1)",
   peakWidth = 500,
-  matrixName = "TopicScoreMatrix", # not needed
+  method = "sum",
   extendUpstream = c(1000, 100000),
   extendDownstream = c(1000, 100000),
   geneUpstream = 5000, #New Param
@@ -57,7 +57,6 @@ addTopicScoreMatrix <- function(
   geneScaleFactor = 5, #New Param
   excludeChr = c("chrY","chrM"),
   blacklist = NULL,
-  tmpFile = NULL,
   subThreads = 1,
   tstart = NULL,
   logFile = NULL
@@ -117,6 +116,8 @@ addTopicScoreMatrix <- function(
   }
   
   outMat <- ArchR:::.safelapply(seq_along(geneRegions), function(z){
+    cat(str_glue("Running...\n\n"))
+    
     chrOutMat <- tryCatch({
       #Get Gene Starts
       geneRegionz <- geneRegions[[z]]
@@ -224,11 +225,16 @@ addTopicScoreMatrix <- function(
       
       #Creating Sparse Matrix
       tmp <- Matrix::sparseMatrix(
-        i = queryHits(tmp), 
-        j = subjectHits(tmp), 
-        x = x, 
+        i = queryHits(tmp),
+        j = subjectHits(tmp),
+        x = x,
         dims = c(length(geneRegionz), nrow(chrScoreMat))
       )
+      
+      if (method == "mean") {
+        cntNonZero <- ncol(tmp) - sparseMatrixStats::rowCounts(tmp, 0)
+        tmp <- tmp / cntNonZero
+      }
       
       #Calculate Gene Scores
       chrScoreMat <- tmp %*% chrScoreMat
