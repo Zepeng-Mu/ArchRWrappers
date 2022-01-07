@@ -236,7 +236,7 @@ addTopicScoreMatrix <- function(
       )
       
       if (method == "mean") {
-        cntNonZero <- ncol(tmp) - sparseMatrixStats::rowCounts(tmp, 0)
+        cntNonZero <- ncol(tmp) - sparseMatrixStats::rowCounts(tmp, value = 0)
         tmp <- tmp / cntNonZero
       }
       
