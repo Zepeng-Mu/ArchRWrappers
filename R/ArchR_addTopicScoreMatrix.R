@@ -76,6 +76,10 @@ addTopicScoreMatrix <- function(
     stop("Found a list in genes symbol! This is an incorrect format. Please correct your genes!")
   }
   
+  if (is.null(peaks)) {
+    stop("peaks should contain a 'name' column that can be matched to rownames in scoreMat!")
+  }
+  
   geneRegions <- genes[BiocGenerics::which(seqnames(genes) %bcni% excludeChr)]
   seqlevels(geneRegions) <- as.character(unique(seqnames(geneRegions)))
   geneRegions <- geneRegions[!is.na(mcols(geneRegions)$symbol)]
@@ -116,13 +120,13 @@ addTopicScoreMatrix <- function(
   }
   
   outMat <- ArchR:::.safelapply(seq_along(geneRegions), function(z){
-    cat(str_glue("Running...\n\n"))
-    
     chrOutMat <- tryCatch({
       #Get Gene Starts
       geneRegionz <- geneRegions[[z]]
       geneRegionz <- geneRegionz[order(geneRegionz$idx)]
       chrz <- paste0(unique(seqnames(geneRegionz)))
+      
+      cat(str_glue("Running {chrz}...\n\n"))
       
       # Peaks by Chr
       chrPeaks <- peaks[seqnames(peaks) == chrz]
