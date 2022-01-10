@@ -40,7 +40,7 @@
 #' @param logFile The path to a file to be used for logging ArchR output.
 #'
 #' @export
-addTopicScoreMatrix <- function(
+scoreGeneByPeak <- function(
   genes = NULL,
   peaks = NULL,
   scoreMat = NULL,
@@ -232,17 +232,17 @@ addTopicScoreMatrix <- function(
         i = queryHits(tmp),
         j = subjectHits(tmp),
         x = x,
-        dims = c(length(geneRegionz), nrow(chrScoreMat))
+        dims = c(length(geneRegionz), nrow(chrScoreMat)),
+        dimnames = list(geneRegionz$symbol, rownames(chrScoreMat))
       )
       
       if (method == "mean") {
         cntNonZero <- ncol(tmp) - sparseMatrixStats::rowCounts(tmp, value = 0)
-        tmp <- tmp / cntNonZero
+        tmp[cntNonZero > 0, ] <- tmp[cntNonZero > 0, ] / cntNonZero[cntNonZero > 0]
       }
       
       #Calculate Gene Scores
       chrScoreMat <- tmp %*% chrScoreMat
-      rownames(chrScoreMat) <- geneRegionz$symbol
       
       #Clean Memory
       rm(isMinus, signDist, extendedGeneRegion, chrPeaks, tmp)
@@ -260,7 +260,7 @@ addTopicScoreMatrix <- function(
       )
     })
     
-    return(chrScoreMat)
+    return(NULL)
     
   }, threads = subThreads) %>% Reduce(rbind, .)
   
