@@ -241,13 +241,16 @@ scoreGeneByPeak <- function(
         dimnames = list(geneRegionz$symbol, rownames(chrScoreMat))
       )
       
+      #Remove empty genes and peaks
+      tmp <- tmp[sparseMatrixStats::rowSums2(tmp) > 0, sparseMatrixStats::colSums2(tmp) > 0]
+      
       if (method == "mean") {
         cntNonZero <- ncol(tmp) - sparseMatrixStats::rowCounts(tmp, value = 0)
         tmp[cntNonZero > 0, ] <- tmp[cntNonZero > 0, ] / cntNonZero[cntNonZero > 0]
       }
       
       #Calculate Gene Scores
-      chrScoreMat <- tmp %*% chrScoreMat
+      chrScoreMat <- tmp %*% chrScoreMat[colnames(tmp), ]
       
       #Clean Memory
       rm(isMinus, signDist, extendedGeneRegion, chrPeaks, tmp)
@@ -265,7 +268,7 @@ scoreGeneByPeak <- function(
       )
     })
     
-    return(NULL)
+    return(errorList)
     
   }, threads = subThreads) %>% Reduce(rbind, .)
   
