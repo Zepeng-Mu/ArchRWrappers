@@ -103,7 +103,7 @@ scoreGeneByPeak <- function(
     geneRegions$geneWeight <- 1 + m * (geneScaleFactor - 1) / (max(m) - min(m))
   }
   
-  #Add Gene Index For ArrowFile
+  #Add Gene Index
   geneRegions <- sort(sortSeqlevels(geneRegions), ignore.strand = TRUE)
   
   geneRegions <- split(geneRegions, seqnames(geneRegions))
@@ -118,6 +118,11 @@ scoreGeneByPeak <- function(
       blacklist <- split(blacklist, seqnames(blacklist))
     }
   }
+  
+  #Filter peaks to those present in scoreMat
+  peaksBoth <- intersect(rownames(scoreMat), peaks$name)
+  peaks <- peaks[peaks$name %in% peaksBoth]
+  scoreMat <- scoreMat[peaksBoth, ]
   
   outMat <- ArchR:::.safelapply(seq_along(geneRegions), function(z){
     chrOutMat <- tryCatch({
