@@ -20,8 +20,8 @@ getMeanMtrx <- function(proj = NULL,
                         groupBy = "Clusters",
                         useSeqnames = c("chr" %&% 1:22, "chrX"),
                         threads = 4) {
-  scMtrx_summ <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames)
-  scMtrx <- assay(scMtrx_summ)
+  scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames)
+  scMtrx <- assay(scMtrx_sce)
   tmpCellCol <- getCellColData(proj, groupBy, drop = F)
   meanMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {
     tmpCell <- rownames(tmpCellCol)[tmpCellCol[[groupBy]] == x]
@@ -29,7 +29,11 @@ getMeanMtrx <- function(proj = NULL,
   }, threads = threads) %>% Reduce("cbind", .)
   
   colnames(meanMtrx) <- unique(tmpCellCol[[groupBy]])
-  rownames(meanMtrx) <- scMtrx_summ@elementMetadata$name
+  if (name == "GeneScoreMatrix") {
+    rownames(sumMtrx) <- rownames(scMtrx_sce)
+  } else if (name == "PeakMatrix") {
+    rownames(sumMtrx) <- stringr::str_glue("{seqnames(scMtrx_sce)}_{start(scMtrx_sce)}-{end(scMtrx_sce)}")
+  }
   return(meanMtrx)
 }
 
@@ -40,6 +44,7 @@ getMeanMtrx <- function(proj = NULL,
 #' @param groupBy The variable in cellColData used to group cells, default is Clusters
 #' @param useSeqnames Chromosomes to include in output matrix, default is chr1-22 and chrX
 #' @param threads Number of threads to use, default is 4
+#' @param featureType String indicates whether matrix rows are `gene` or `peak`, or anything else
 #'
 #' @return A feature-by-group sparse matrix
 #' @export
@@ -49,9 +54,10 @@ getSumMtrx <- function(proj = NULL,
                        name = "PeakMatrix",
                        groupBy = "Clusters",
                        useSeqnames = c("chr" %&% 1:22, "chrX"),
+                       featureType = ifelse(name == "PeakMatrix", "peak", "gene"),
                        threads = 4) {
-  scMtrx_summ <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames)
-  scMtrx <- assay(scMtrx_summ)
+  scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames)
+  scMtrx <- assay(scMtrx_sce)
   tmpCellCol <- getCellColData(proj, groupBy, drop = F)
   sumMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {
     tmpCell <- rownames(tmpCellCol)[tmpCellCol[[groupBy]] == x]
@@ -59,7 +65,12 @@ getSumMtrx <- function(proj = NULL,
   }, threads = threads) %>% Reduce("cbind", .)
   
   colnames(sumMtrx) <- unique(tmpCellCol[[groupBy]])
-  rownames(sumMtrx) <- scMtrx_summ@elementMetadata$name
+  if (featureType == "gene") {
+    rownames(sumMtrx) <- rownames(scMtrx_sce)
+  } else if (featureType == "peak") {
+    rownames(sumMtrx) <- stringr::str_glue("{seqnames(scMtrx_sce)}_{start(scMtrx_sce)}-{end(scMtrx_sce)}")
+  }
+  
   return(sumMtrx)
 }
 
@@ -80,8 +91,8 @@ getNonZeroProp <- function(proj = NULL,
                            groupBy = "Clusters",
                            useSeqnames = c("chr" %&% 1:22, "chrX"),
                            threads = 14) {
-  scMtrx_summ <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames)
-  scMtrx <- assay(scMtrx_summ)
+  scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames)
+  scMtrx <- assay(scMtrx_sce)
   tmpCellCol <- getCellColData(proj, groupBy, drop = F)
   propMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {
     tmpCell <- rownames(tmpCellCol)[tmpCellCol[[groupBy]] == x]
@@ -90,6 +101,6 @@ getNonZeroProp <- function(proj = NULL,
   
   propMtrx <- 1 - propMtrx
   colnames(propMtrx) <- unique(tmpCellCol[[groupBy]])
-  rownames(propMtrx) <- scMtrx_summ@elementMetadata$name
+  rownames(propMtrx) <- scMtrx_sce@elementMetadata$name
   return(propMtrx)
 }
