@@ -131,7 +131,7 @@ scoreGeneByPeak <- function(
       geneRegionz <- geneRegionz[order(geneRegionz$idx)]
       chrz <- paste0(unique(seqnames(geneRegionz)))
       
-      cat(str_glue("Running {chrz}...\n\n"))
+      message(str_glue("Running {chrz}...\n"))
       
       # Peaks by Chr
       chrPeaks <- peaks[seqnames(peaks) == chrz]
