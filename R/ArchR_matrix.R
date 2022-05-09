@@ -31,9 +31,9 @@ getMeanMtrx <- function(proj = NULL,
   
   colnames(meanMtrx) <- unique(tmpCellCol[[groupBy]])
   if (featureType == "gene") {
-    rownames(sumMtrx) <- rownames(scMtrx_sce)
+    rownames(meanMtrx) <- rownames(scMtrx_sce)
   } else if (featureType == "peak") {
-    rownames(sumMtrx) <- stringr::str_glue("{seqnames(scMtrx_sce)}_{start(scMtrx_sce)}-{end(scMtrx_sce)}")
+    rownames(meanMtrx) <- stringr::str_glue("{seqnames(scMtrx_sce)}_{start(scMtrx_sce)}-{end(scMtrx_sce)}")
   }
   
   return(meanMtrx)
