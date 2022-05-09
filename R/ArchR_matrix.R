@@ -19,6 +19,7 @@ getMeanMtrx <- function(proj = NULL,
                         name = "GeneScoreMatrix",
                         groupBy = "Clusters",
                         useSeqnames = c("chr" %&% 1:22, "chrX"),
+                        featureType = ifelse(name == "PeakMatrix", "peak", "gene"),
                         threads = 4) {
   scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames)
   scMtrx <- assay(scMtrx_sce)
@@ -29,11 +30,12 @@ getMeanMtrx <- function(proj = NULL,
   }, threads = threads) %>% Reduce("cbind", .)
   
   colnames(meanMtrx) <- unique(tmpCellCol[[groupBy]])
-  if (name == "GeneScoreMatrix") {
+  if (featureType == "gene") {
     rownames(sumMtrx) <- rownames(scMtrx_sce)
-  } else if (name == "PeakMatrix") {
+  } else if (featureType == "peak") {
     rownames(sumMtrx) <- stringr::str_glue("{seqnames(scMtrx_sce)}_{start(scMtrx_sce)}-{end(scMtrx_sce)}")
   }
+  
   return(meanMtrx)
 }
 
