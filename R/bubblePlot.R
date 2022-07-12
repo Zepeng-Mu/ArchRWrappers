@@ -69,7 +69,7 @@ bubblePlot <- function(propMtrx = NULL,
     )
   }
 
-  cat("Plotting...\n")
+  message("Plotting...")
 
   hp <- Heatmap(
     matrix = meanMtrx,

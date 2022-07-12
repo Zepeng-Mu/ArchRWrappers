@@ -31,7 +31,7 @@ getMeanMtrx <- function(proj = NULL,
   
   colnames(meanMtrx) <- unique(tmpCellCol[[groupBy]])
   if (featureType == "gene") {
-    rownames(meanMtrx) <- rownames(scMtrx_sce)
+    rownames(meanMtrx) <- rowData(scMtrx_sce)$name
   } else if (featureType == "peak") {
     rownames(meanMtrx) <- stringr::str_glue("{seqnames(scMtrx_sce)}_{start(scMtrx_sce)}-{end(scMtrx_sce)}")
   }
@@ -70,7 +70,7 @@ getSumMtrx <- function(proj = NULL,
   if (featureType == "gene") {
     rownames(sumMtrx) <- rownames(scMtrx_sce)
   } else if (featureType == "peak") {
-    rownames(sumMtrx) <- stringr::str_glue("{seqnames(scMtrx_sce)}_{start(scMtrx_sce)}-{end(scMtrx_sce)}")
+    rownames(sumMtrx) <- SummarizedExperiment::rowData(scMtrx_sce)$name
   }
   
   return(sumMtrx)

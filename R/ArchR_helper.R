@@ -30,7 +30,7 @@ addReducedMNN <- function(ArchRProj,
                           k = 15,
                           dimsToUse,
                           ...) {
-  cat(str_glue("Getting {reducedDims}...\n\n"))
+  message(str_glue("Getting {reducedDims}...\n"))
   origRedDim <- getReducedDims(
     ArchRProj,
     corCutOff = corCutOff,
@@ -51,7 +51,7 @@ addReducedMNN <- function(ArchRProj,
   
   origFeatures <- origRedDimObj[[grep("Features", names(origRedDimObj))]]
   
-  cat("Performing reducedMNN...\n")
+  message("Performing reducedMNN...")
   redMnnRes <- batchelor::reducedMNN(
     origRedDim,
     k = k,
@@ -59,7 +59,7 @@ addReducedMNN <- function(ArchRProj,
     ...
   )
   
-  cat(str_glue("Saving {name} to ArchR project...\n\n"))
+  message(str_glue("Saving {name} to ArchR project...\n"))
   ArchRProj@reducedDims[[name]] <- SimpleList(
     matDR = redMnnRes$corrected,
     params = NA,
@@ -85,7 +85,7 @@ addReducedMNN <- function(ArchRProj,
 #' @examples
 #' 
 addAnyReducedMtrx <- function(ArchRProj, name = "myReduced", matrix = NULL) {
-  cat(str_glue("Saving {name} to ArchR project...\n\n"))
+  message(str_glue("Saving {name} to ArchR project...\n"))
   matrix <- matrix[ArchRProj$cellName, ]
   ArchRProj@reducedDims[[name]] <- SimpleList(
     matDR = matrix,
@@ -132,7 +132,7 @@ ArchR2sce <- function(
   useRowData = F,
   threads = 4
 ) {
-  cat(str_glue("Getting {matrix} from ArchR project...\n\n"))
+  message(str_glue("Getting {matrix} from ArchR project...\n"))
   projMtrx <- getMatrixFromProject(ArchRProj, useMatrix = matrix,
                                  useSeqnames = useSeqnames,
                                  binarize = binarize, threads = threads)
