@@ -21,7 +21,7 @@ getMeanMtrx <- function(proj = NULL,
                         useSeqnames = c("chr" %&% 1:22, "chrX"),
                         featureType = ifelse(name == "PeakMatrix", "peak", "gene"),
                         threads = 4) {
-  scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames)
+  scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
   scMtrx <- assay(scMtrx_sce)
   tmpCellCol <- getCellColData(proj, groupBy, drop = F)
   meanMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {
@@ -58,7 +58,7 @@ getSumMtrx <- function(proj = NULL,
                        useSeqnames = c("chr" %&% 1:22, "chrX"),
                        featureType = ifelse(name == "PeakMatrix", "peak", "gene"),
                        threads = 4) {
-  scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames)
+  scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
   scMtrx <- assay(scMtrx_sce)
   tmpCellCol <- getCellColData(proj, groupBy, drop = F)
   sumMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {

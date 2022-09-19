@@ -142,7 +142,7 @@ ArchR2sce <- function(
   
   rdList <- lapply(1:length(reducedDims), function(rd) {
     tmpRd <- getReducedDims(ArchRProj, reducedDims = reducedDims[rd], scaleDims = scaleDims[rd])
-    tmpRd <- tmpRd[colnames(matrixAssay), ]
+    tmpRd <- tmpRd[colnames(projMtrx), ]
     return(tmpRd)
   })
   
@@ -150,7 +150,7 @@ ArchR2sce <- function(
   
   embList <- lapply(1:length(embeddings), function(emb) {
     tmpEmb <- getEmbedding(ArchRProj, embedding = embeddings[emb], returnDF = T)
-    tmpEmb <- tmpEmb[colnames(matrixAssay), ]
+    tmpEmb <- tmpEmb[colnames(projMtrx), ]
     return(as.matrix(tmpEmb))
   })
   
