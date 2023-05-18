@@ -68,7 +68,7 @@ getSumMtrx <- function(proj = NULL,
 
   colnames(sumMtrx) <- unique(tmpCellCol[[groupBy]])
   if (featureType == "gene") {
-    rownames(sumMtrx) <- rownames(scMtrx_sce)
+    rownames(sumMtrx) <- SummarizedExperiment::rowData(scMtrx_sce)$name
   } else if (featureType == "peak") {
     rownames(sumMtrx) <- SummarizedExperiment::rowData(scMtrx_sce)$name
   }
