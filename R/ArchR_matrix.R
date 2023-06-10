@@ -21,9 +21,16 @@ getMeanMtrx <- function(proj = NULL,
                         useSeqnames = c("chr" %&% 1:22, "chrX"),
                         featureType = ifelse(name == "PeakMatrix", "peak", "gene"),
                         threads = 4) {
+  if (!groupBy %in% colnames(getCellColData(proj))) {
+    stop(stringr::str_glue("{groupBy} not in cellColData of {proj}!!"))
+  }
+  
+  message("Getting matrix from ArchR project...")
   scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
   scMtrx <- assay(scMtrx_sce)
   tmpCellCol <- getCellColData(proj, groupBy, drop = F)
+  
+  message("Calculating mean matrix...")
   meanMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {
     tmpCell <- rownames(tmpCellCol)[tmpCellCol[[groupBy]] == x]
     tmpMtrx <- sparseMatrixStats::rowMeans2(scMtrx, cols = tmpCell)
@@ -58,9 +65,16 @@ getSumMtrx <- function(proj = NULL,
                        useSeqnames = c("chr" %&% 1:22, "chrX"),
                        featureType = ifelse(name == "PeakMatrix", "peak", "gene"),
                        threads = 4) {
+  if (!groupBy %in% colnames(getCellColData(proj))) {
+    stop(stringr::str_glue("{groupBy} not in cellColData of {proj}!!"))
+  }
+  
+  message("Getting matrix from ArchR project...")
   scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
   scMtrx <- assay(scMtrx_sce)
   tmpCellCol <- getCellColData(proj, groupBy, drop = F)
+  
+  message("Calculating sum matrix...")
   sumMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {
     tmpCell <- rownames(tmpCellCol)[tmpCellCol[[groupBy]] == x]
     tmpMtrx <- sparseMatrixStats::rowSums2(scMtrx, cols = tmpCell)
@@ -93,9 +107,16 @@ getNonZeroProp <- function(proj = NULL,
                            groupBy = "Clusters",
                            useSeqnames = c("chr" %&% 1:22, "chrX"),
                            threads = 14) {
+  if (!groupBy %in% colnames(getCellColData(proj))) {
+    stop(stringr::str_glue("{groupBy} not in cellColData of {proj}!!"))
+  }
+  
+  message("Getting matrix from ArchR project...")
   scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
   scMtrx <- assay(scMtrx_sce)
   tmpCellCol <- getCellColData(proj, groupBy, drop = F)
+  
+  message("Calculating non-zero proportion matrix...")
   propMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {
     tmpCell <- rownames(tmpCellCol)[tmpCellCol[[groupBy]] == x]
     tmpProp <- sparseMatrixStats::rowCounts(scMtrx, cols = tmpCell, value = 0) / length(tmpCell)
