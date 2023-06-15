@@ -1,6 +1,6 @@
-Package: Phoenix
-Title: Some useful functions that I use very often
-Version: 0.0.0.9000
+Package: ArchRWrappers
+Title: A package of wrapper functions for ArchR single-cell data analysis
+Version: 0.0.1.0000
 Authors@R: 
     person("Zepeng", "Mu", , "zepengmu@uchicago.edu", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
@@ -9,7 +9,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.2
 Imports: 
     ArchR,
     batchelor,
