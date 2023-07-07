@@ -5,7 +5,7 @@
 
 #' Get mean matrix for each group from an ArchR project
 #'
-#' @param proj An ArchR project
+#' @param ArchRProj An ArchR project
 #' @param name Name of matrix to use, default is GeneScoreMatrix
 #' @param groupBy The variable in cellColData used to group cells, default is Clusters
 #' @param useSeqnames Chromosomes to include in output matrix, default is chr1-22 and chrX
@@ -22,14 +22,14 @@ getMeanMtrx <- function(ArchRProj = NULL,
                         select = NULL,
                         ignoreCase = TRUE,
                         threads = 4) {
-  if (!groupBy %in% colnames(getCellColData(proj))) {
-    stop(stringr::str_glue("{groupBy} not in cellColData of {proj}!!"))
+  if (!groupBy %in% colnames(getCellColData(ArchRProj))) {
+    stop(stringr::str_glue("{groupBy} not in cellColData of {ArchRProj}!!"))
   }
 
   message("Getting matrix from ArchR project...")
-  scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
+  scMtrx_sce <- getMatrixFromProject(ArchRProj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
   scMtrx <- assay(scMtrx_sce)
-  tmpCellCol <- getCellColData(proj, groupBy, drop = F)
+  tmpCellCol <- getCellColData(ArchRProj, groupBy, drop = F)
 
   message("Calculating mean matrix...")
   meanMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {
@@ -50,7 +50,7 @@ getMeanMtrx <- function(ArchRProj = NULL,
 
 #' Get sum matrix for each group from an ArchR project
 #'
-#' @param proj An ArchR project
+#' @param ArchRProj An ArchR project
 #' @param name Name of matrix to use, default is PeakMatrix
 #' @param groupBy The variable in cellColData used to group cells, default is Clusters
 #' @param useSeqnames Chromosomes to include in output matrix, default is chr1-22 and chrX
@@ -61,20 +61,20 @@ getMeanMtrx <- function(ArchRProj = NULL,
 #' @export
 #'
 #' @examples
-getSumMtrx <- function(proj = NULL,
+getSumMtrx <- function(ArchRProj = NULL,
                        name = "PeakMatrix",
                        groupBy = "Clusters",
                        useSeqnames = c("chr" %&% 1:22, "chrX"),
                        featureType = ifelse(name == "PeakMatrix", "peak", "gene"),
                        threads = 4) {
-  if (!groupBy %in% colnames(getCellColData(proj))) {
-    stop(stringr::str_glue("{groupBy} not in cellColData of {proj}!!"))
+  if (!groupBy %in% colnames(getCellColData(ArchRProj))) {
+    stop(stringr::str_glue("{groupBy} not in cellColData of {ArchRProj}!!"))
   }
 
   message("Getting matrix from ArchR project...")
-  scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
+  scMtrx_sce <- getMatrixFromProject(ArchRProj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
   scMtrx <- assay(scMtrx_sce)
-  tmpCellCol <- getCellColData(proj, groupBy, drop = F)
+  tmpCellCol <- getCellColData(ArchRProj, groupBy, drop = F)
 
   message("Calculating sum matrix...")
   sumMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {
@@ -94,7 +94,7 @@ getSumMtrx <- function(proj = NULL,
 
 #' Get Non-zero proportion from ArchR project
 #'
-#' @param proj An ArchR project
+#' @param ArchRProj An ArchR project
 #' @param name Name of matrix to use, default is GeneScoreMatrix
 #' @param groupBy The variable in cellColData used to group cells, default is Clusters
 #' @param useSeqnames Chromosomes to include in output matrix, default is chr1-22 and chrX
@@ -104,19 +104,19 @@ getSumMtrx <- function(proj = NULL,
 #' @export
 #'
 #' @examples
-getNonZeroProp <- function(proj = NULL,
+getNonZeroProp <- function(ArchRProj = NULL,
                            name = "GeneScoreMatrix",
                            groupBy = "Clusters",
                            useSeqnames = c("chr" %&% 1:22, "chrX"),
                            threads = 14) {
-  if (!groupBy %in% colnames(getCellColData(proj))) {
-    stop(stringr::str_glue("{groupBy} not in cellColData of {proj}!!"))
+  if (!groupBy %in% colnames(getCellColData(ArchRProj))) {
+    stop(stringr::str_glue("{groupBy} not in cellColData of {ArchRProj}!!"))
   }
 
   message("Getting matrix from ArchR project...")
-  scMtrx_sce <- getMatrixFromProject(proj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
+  scMtrx_sce <- getMatrixFromProject(ArchRProj, useMatrix = name, useSeqnames = useSeqnames, threads = threads)
   scMtrx <- assay(scMtrx_sce)
-  tmpCellCol <- getCellColData(proj, groupBy, drop = F)
+  tmpCellCol <- getCellColData(ArchRProj, groupBy, drop = F)
 
   message("Calculating non-zero proportion matrix...")
   propMtrx <- ArchR:::.safelapply(unique(tmpCellCol[[groupBy]]), function(x) {
