@@ -19,7 +19,7 @@ addGeneBridgeIntegrationMatrix <- function(
     plotUMAP = F,
     UMAPParams = list(n_neighbors = 40, min_dist = 0.4, metric = "cosine", verbose = FALSE),
     useImputation = F,
-    reduction = "pcaproject",
+    reduction = "lsiproject",
     bridge.reduction = "cca",
     reference.reduction = "pca_harmony",
     addToArrow = F,
@@ -52,7 +52,7 @@ addGeneBridgeIntegrationMatrix <- function(
   ArchR:::.validInput(input = dimsToUse, name = "dimsToUse", valid = c("numeric", "null"))
   ArchR:::.validInput(input = scaleDims, name = "scaleDims", valid = c("boolean", "null"))
   ArchR:::.validInput(input = plotUMAP, name = "plotUMAP", valid = c("boolean"))
-  ArchR:::.validInput(input = UMAPParams, name = "UMAPParams", valid = c("list"))  
+  ArchR:::.validInput(input = UMAPParams, name = "UMAPParams", valid = c("list"))
   ArchR:::.validInput(input = useImputation, name = "useImputation", valid = c("boolean"))
   ArchR:::.validInput(input = reduction, name = "reduction", valid = c("character"))
   ArchR:::.validInput(input = addToArrow, name = "addToArrow", valid = c("boolean"))
@@ -121,7 +121,7 @@ addGeneBridgeIntegrationMatrix <- function(
   }
   
   #########################################################################################
-  # 2. Check All RNA is a Cell Name 
+  # 2. Check All RNA is a Cell Name
   #########################################################################################
   message("ArchRWrappers: Checking seRNA data")
   
@@ -300,7 +300,7 @@ addGeneBridgeIntegrationMatrix <- function(
   #Integration
   message(str_glue("ArchRWrappers: Integration in {length(blockList)} blocks\n"))
   dfAll <- ArchR:::.safelapply(seq_along(blockList), function(i){
-    message("ArchRWrappers: Start integration")
+    message(str_glue("ArchRWrappers: Integrating block {i}...\n"))
     prefix <- sprintf("Block (%s of %s) :", i , length(blockList))
     
     blocki <- blockList[[i]]
@@ -320,7 +320,7 @@ addGeneBridgeIntegrationMatrix <- function(
     message("ArchRWrappers: Getting partial Matrix")
     mat <- ArchR:::.getPartialMatrix(
       getArrowFiles(subProj),
-      featureDF = peakDf, 
+      featureDF = peakDf,
       threads = 2,
       cellNames = subProj$cellNames,
       useMatrix = useMatrix,
@@ -343,7 +343,7 @@ addGeneBridgeIntegrationMatrix <- function(
     
     # Create Seurat sbject
     seuratATAC  <- CreateSeuratObject(counts = atacAssay, assay = "ATAC")
-
+    
     #Set Default Assay
     DefaultAssay(seuratATAC) <- "ATAC"
     
@@ -371,8 +371,12 @@ addGeneBridgeIntegrationMatrix <- function(
     gc()
     
     # Drop first dimension for ATAC reduction
-    dims.atac <- 1:30
+    dims.atac <- 2:50
     dims.rna <- 1:50
+    
+    subRNA <- SCTransform(object = subRNA, conserve.memory = T, ncells = 3000) %>%
+      RunPCA() %>%
+      RunUMAP(dims = 1:50, return.model = T)
     
     DefaultAssay(subRNA) <- "SCT"
     
@@ -386,7 +390,7 @@ addGeneBridgeIntegrationMatrix <- function(
     )
     
     ##############################################################################################
-    #3. Transfer Anchors  
+    #3. Transfer Anchors
     ##############################################################################################
     message("ArchRWrappers: Transfering Anchors")
     transferAnchors <- Seurat::FindBridgeTransferAnchors(
@@ -403,8 +407,8 @@ addGeneBridgeIntegrationMatrix <- function(
     rDSub <- rD[colnames(seuratATAC), , drop = F]
     transferParams$anchorset <- transferAnchors
     transferParams$weight.reduction <- CreateDimReducObject(
-      embeddings = rDSub, 
-      key = "LSI_", 
+      embeddings = rDSub,
+      key = "LSI_",
       assay = DefaultAssay(seuratATAC)
     )
     transferParams$verbose <- F
@@ -428,7 +432,7 @@ addGeneBridgeIntegrationMatrix <- function(
     
     #Match results
     matchDF <- DataFrame(
-      cellNames = colnames(seuratATAC), 
+      cellNames = colnames(seuratATAC),
       predictionScore = rnaLabels$prediction.score.max,
       predictedGroup = rnaLabels$predicted.id,
       predictedCell = rnaLabels2
@@ -461,8 +465,8 @@ addGeneBridgeIntegrationMatrix <- function(
       sampleNames <- getCellColData(subProj, "Sample")[matchDF$cellNames, ]
       uniqueSamples <- unique(sampleNames)
       matchedRNA <- .safeSubset( #If Rownames disappeared this will catch that!
-        mat = matchedRNA, 
-        subsetRows = paste0(featureDF$name), 
+        mat = matchedRNA,
+        subsetRows = paste0(featureDF$name),
         subsetCols = matchDF$cellNames
       )
       
@@ -482,16 +486,16 @@ addGeneBridgeIntegrationMatrix <- function(
         lengthI <- length(mat@i)
         
         #Create Data Set
-        o <- ArchR:::.suppressAll(h5createDataset(tmpFilei, paste0(Group,"/i"), storage.mode = "integer", 
+        o <- ArchR:::.suppressAll(h5createDataset(tmpFilei, paste0(Group,"/i"), storage.mode = "integer",
                                                   dims = c(lengthI, 1), level = 0))
         
-        o <- ArchR:::.suppressAll(h5createDataset(tmpFilei, paste0(Group,"/jLengths"), storage.mode = "integer", 
+        o <- ArchR:::.suppressAll(h5createDataset(tmpFilei, paste0(Group,"/jLengths"), storage.mode = "integer",
                                                   dims = c(lengthRle, 1), level = 0))
         
-        o <- ArchR:::.suppressAll(h5createDataset(tmpFilei, paste0(Group,"/jValues"), storage.mode = "integer", 
+        o <- ArchR:::.suppressAll(h5createDataset(tmpFilei, paste0(Group,"/jValues"), storage.mode = "integer",
                                                   dims = c(lengthRle, 1), level = 0))
         
-        o <- ArchR:::.suppressAll(h5createDataset(tmpFilei, paste0(Group, "/x"), storage.mode = "double", 
+        o <- ArchR:::.suppressAll(h5createDataset(tmpFilei, paste0(Group, "/x"), storage.mode = "double",
                                                   dims = c(lengthI, 1), level = 0))
         
         #Write Data Set
@@ -547,29 +551,29 @@ addGeneBridgeIntegrationMatrix <- function(
         .safeSaveRDS(object = jointCCA, file = file.path(outDir3, paste0("Save-Block", i,"-JointCCA.rds")))
         
         p1 <- ggPoint(
-          x = uwotUmap[,1], 
-          y = uwotUmap[,2], 
+          x = uwotUmap[,1],
+          y = uwotUmap[,2],
           color = jointCCA$Assay,
-          randomize = TRUE, 
+          randomize = TRUE,
           size = 0.2,
           title = paste0(prefix, " colored by Assay"),
           xlabel = "UMAP Dimension 1",
           ylabel = "UMAP Dimension 2",
           rastr = TRUE
-        )+ theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
+        )+ theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
                  axis.text.y = element_blank(), axis.ticks.y = element_blank())
         
         p2 <- ggPoint(
-          x = uwotUmap[,1], 
-          y = uwotUmap[,2], 
-          color = jointCCA$Group, 
+          x = uwotUmap[,1],
+          y = uwotUmap[,2],
+          color = jointCCA$Group,
           randomize = TRUE,
           size = 0.2,
           title = paste0(prefix, " colored by scRNA Group"),
           xlabel = "UMAP Dimension 1",
           ylabel = "UMAP Dimension 2",
           rastr = TRUE
-        )+ theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
+        )+ theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
                  axis.text.y = element_blank(), axis.ticks.y = element_blank())
         
         pdf(file.path(outDir3, paste0("Save-Block", i,"-JointCCA-UMAP.pdf")), width = 12, height = 6, useDingbats = FALSE)
@@ -624,13 +628,13 @@ addGeneBridgeIntegrationMatrix <- function(
         cellNames <- .h5read(sampleIF[x], paste0(sample, "/cellNames"))
         
         mat <- sparseMatrix(
-          i = ArchR:::.h5read(sampleIF[x], paste0(sample, "/i"))[,1], 
+          i = ArchR:::.h5read(sampleIF[x], paste0(sample, "/i"))[,1],
           j = as.vector(
             Rle(
-              ArchR:::.h5read(sampleIF[x], paste0(sample, "/jValues"))[,1], 
+              ArchR:::.h5read(sampleIF[x], paste0(sample, "/jValues"))[,1],
               ArchR:::.h5read(sampleIF[x], paste0(sample, "/jLengths"))[,1]
             )
-          ), 
+          ),
           x = ArchR:::.h5read(sampleIF[x], paste0(sample, "/x"))[,1],
           dims = c(nrow(featureDF), length(cellNames))
         )
@@ -663,20 +667,20 @@ addGeneBridgeIntegrationMatrix <- function(
       )
       
       o <- h5write(
-        obj = dfAll[colnames(sampleMat), "predictionScore"], 
-        file = ArrowFiles[sample], 
+        obj = dfAll[colnames(sampleMat), "predictionScore"],
+        file = ArrowFiles[sample],
         name = paste0(matrixName, "/Info/predictionScore")
       )
       
       o <- h5write(
-        obj = dfAll[colnames(sampleMat), "predictedGroup"], 
-        file = ArrowFiles[sample], 
+        obj = dfAll[colnames(sampleMat), "predictedGroup"],
+        file = ArrowFiles[sample],
         name = paste0(matrixName, "/Info/predictedGroup")
       )
       
       o <- h5write(
-        obj = dfAll[colnames(sampleMat), "predictedCell"], 
-        file = ArrowFiles[sample], 
+        obj = dfAll[colnames(sampleMat), "predictedCell"],
+        file = ArrowFiles[sample],
         name = paste0(matrixName, "/Info/predictedCell")
       )
       
@@ -690,9 +694,9 @@ addGeneBridgeIntegrationMatrix <- function(
         
         #Write sparseMatrix to Arrow File!
         o <- ArchR:::.addMatToArrow(
-          mat = matz, 
-          ArrowFile = ArrowFiles[sample], 
-          Group = paste0(matrixName, "/", chrz), 
+          mat = matz,
+          ArrowFile = ArrowFiles[sample],
+          Group = paste0(matrixName, "/", chrz),
           binarize = FALSE,
           addColSums = TRUE,
           addRowSums = TRUE,
@@ -719,24 +723,24 @@ addGeneBridgeIntegrationMatrix <- function(
   
   message("ArchRWrappers: Adding cellColData")
   ArchRProj <- addCellColData(
-    ArchRProj = ArchRProj, 
-    cells = dfAll$cellNames, 
+    ArchRProj = ArchRProj,
+    cells = dfAll$cellNames,
     data = dfAll$predictedCell,
     name = nameCell,
     force = TRUE
   )
   
   ArchRProj <- addCellColData(
-    ArchRProj = ArchRProj, 
-    cells = dfAll$cellNames, 
+    ArchRProj = ArchRProj,
+    cells = dfAll$cellNames,
     data = dfAll$predictedGroup,
     name = nameGroup,
     force = TRUE
   )
   
   ArchRProj <- addCellColData(
-    ArchRProj = ArchRProj, 
-    cells = dfAll$cellNames, 
+    ArchRProj = ArchRProj,
+    cells = dfAll$cellNames,
     data = dfAll$predictionScore,
     name = nameScore,
     force = TRUE

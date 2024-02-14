@@ -9,19 +9,19 @@
 #' @param corCutOff Cutoff for correlation between library depth and reduced dimensions
 #' @param reducedDims Name of reducedDims from ArchR project to use in reducedMNN
 #' @param name Name of output MNN matrix
-#' @param scaleDims Whether to let ArchR scale reducedDims
+#' @param scaleDims Whether to let ArchR scale input reducedDims
 #' @param scaleDimsAfter Whether to let ArchR scale output reducedDims
 #' @param groupBy Variable name in ArchR cellColData to adjust for
-#' @param k 
+#' @param k
 #' @param dimsToUse Dimensions to use in reducedMNN
 #' @param ... Other parameters for reducedMNN
-#' 
+#'
 #' @return
 #' @export
 #'
 #' @examples
 addReducedMNN <- function(ArchRProj,
-                          corCutOff = 0.5,
+                          corCutOff = 0.75,
                           reducedDims = "IterativeLSI",
                           name = "reducedMNN",
                           scaleDims = T,
@@ -38,7 +38,7 @@ addReducedMNN <- function(ArchRProj,
     dimsToUse = dimsToUse,
     scaleDims = scaleDims
   )
-  
+
   origRedDimObj <- getReducedDims(
     ArchRProj,
     corCutOff = corCutOff,
@@ -47,10 +47,10 @@ addReducedMNN <- function(ArchRProj,
     scaleDims = scaleDims,
     returnMatrix = F
   )
-  
-  
+
+
   origFeatures <- origRedDimObj[[grep("Features", names(origRedDimObj))]]
-  
+
   message("Performing reducedMNN...")
   redMnnRes <- batchelor::reducedMNN(
     origRedDim,
@@ -58,7 +58,7 @@ addReducedMNN <- function(ArchRProj,
     batch = getCellColData(ArchRProj, select = groupBy, drop = T),
     ...
   )
-  
+
   message(str_glue("Saving {name} to ArchR project...\n"))
   ArchRProj@reducedDims[[name]] <- SimpleList(
     matDR = redMnnRes$corrected,
@@ -69,7 +69,7 @@ addReducedMNN <- function(ArchRProj,
     Features = origFeatures,
     tileSize = 500
   )
-  
+
   return(ArchRProj)
 }
 
@@ -83,7 +83,7 @@ addReducedMNN <- function(ArchRProj,
 #' @export
 #'
 #' @examples
-#' 
+#'
 addAnyReducedMtrx <- function(ArchRProj, name = "myReduced", matrix = NULL) {
   message(str_glue("Saving {name} to ArchR project...\n"))
   matrix <- matrix[ArchRProj$cellName, ]
@@ -94,25 +94,23 @@ addAnyReducedMtrx <- function(ArchRProj, name = "myReduced", matrix = NULL) {
     scaleDims = NA,
     corToDepth = NA
   )
-  
+
   return(ArchRProj)
 }
 
 #' Title
 #'
-#' @param ArchRProj 
-#' @param matrix 
-#' @param useSeqnames 
-#' @param binarize 
-#' @param targetAssay 
-#' @param addLog 
-#' @param scaleTo 
-#' @param targetAssayLog 
-#' @param reducedDims 
-#' @param scaleDims 
-#' @param threads 
-#' @param embeddings 
-#' @param useRowData 
+#' @param ArchRProj An ArchR project
+#' @param useMatrix Matrix to use from ArchR project
+#' @param useSeqnames
+#' @param binarize
+#' @param targetAssay Name of assay to use in output SingleCellExperiment
+#' @param scaleTo
+#' @param reducedDims ReducedDims from ArchR project to add
+#' @param scaleDims
+#' @param threads
+#' @param embeddings Embeddings from ArchR project to add
+#' @param useRowData Whether to use rowData from ArchR matrix, if not, use rowRanges
 #'
 #' @importFrom SingleCellExperiment SingleCellExperiment
 #' @return
@@ -121,7 +119,7 @@ addAnyReducedMtrx <- function(ArchRProj, name = "myReduced", matrix = NULL) {
 #' @examples
 ArchR2sce <- function(
   ArchRProj,
-  matrix = "PeakMatrix",
+  useMatrix = "PeakMatrix",
   useSeqnames = c("chr"%&%1:22, "chrX"),
   binarize = F,
   targetAssay = "count",
@@ -136,27 +134,27 @@ ArchR2sce <- function(
   projMtrx <- getMatrixFromProject(ArchRProj, useMatrix = matrix,
                                  useSeqnames = useSeqnames,
                                  binarize = binarize, threads = threads)
-  
+
   assayList <- list(assay(projMtrx))
   names(assayList) <- targetAssay
-  
+
   rdList <- lapply(1:length(reducedDims), function(rd) {
     tmpRd <- getReducedDims(ArchRProj, reducedDims = reducedDims[rd], scaleDims = scaleDims[rd])
     tmpRd <- tmpRd[colnames(projMtrx), ]
     return(tmpRd)
   })
-  
+
   names(rdList) <- reducedDims
-  
+
   embList <- lapply(1:length(embeddings), function(emb) {
     tmpEmb <- getEmbedding(ArchRProj, embedding = embeddings[emb], returnDF = T)
     tmpEmb <- tmpEmb[colnames(projMtrx), ]
     return(as.matrix(tmpEmb))
   })
-  
+
   names(embList) <- embeddings
   rdList <- append(rdList, embList)
-  
+
   if (useRowData) {
     outSce <- SingleCellExperiment(
       assays = assayList,
@@ -174,6 +172,6 @@ ArchR2sce <- function(
       reducedDims = rdList
     )
   }
-  
+
   return(outSce)
 }
