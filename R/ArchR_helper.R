@@ -130,8 +130,8 @@ ArchR2sce <- function(
   useRowData = F,
   threads = 4
 ) {
-  message(str_glue("Getting {matrix} from ArchR project...\n"))
-  projMtrx <- getMatrixFromProject(ArchRProj, useMatrix = matrix,
+  message(str_glue("Getting {useMatrix} from ArchR project...\n"))
+  projMtrx <- getMatrixFromProject(ArchRProj, useMatrix = useMatrix,
                                  useSeqnames = useSeqnames,
                                  binarize = binarize, threads = threads)
 
