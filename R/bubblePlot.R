@@ -1,25 +1,63 @@
-#' Title
+#' Create a bubble plot for visualizing marker features
 #'
-#' @param propMtrx
-#' @param meanMtrx
-#' @param markerSet
-#' @param useFeatures
-#' @param labelFeatures
-#' @param Log2FC
-#' @param FDR
-#' @param row_title The same as `row_title` in `Heatmap` of `ComplexHeatmap`.
-#' @param column_title The same as `column_title` in `Heatmap` of `ComplexHeatmap`.
-#' @param filterSig
-#' @param propCutoff
-#' @param color
-#' @param ... Other argument passed to `Heatmap` of `ComplexHeatmap`.
+#' This function creates a bubble plot (also known as dot plot) to visualize marker
+#' features across different groups. The size of each bubble represents the proportion
+#' of cells expressing the feature, while the color represents the mean expression level.
+#' Significant markers can be highlighted with black borders.
 #'
-#' @return
+#' @param propMtrx A numeric matrix containing the proportion of cells expressing each
+#'   feature (rows) in each group (columns). Values should be between 0 and 1
+#' @param meanMtrx A numeric matrix containing the mean expression values for each
+#'   feature (rows) in each group (columns)
+#' @param markerSet A SummarizedExperiment object containing marker statistics with
+#'   "FDR" and "Log2FC" assays, typically from ArchR's getMarkerFeatures
+#' @param useFeatures Character vector of feature names to include in the plot
+#' @param labelFeatures Character vector of feature names to label in the plot.
+#'   Default is the same as useFeatures
+#' @param Log2FC Numeric threshold for log2 fold change to define significant markers.
+#'   Default is 1
+#' @param FDR Numeric threshold for false discovery rate to define significant markers.
+#'   Default is 0.05
+#' @param row_title Character string for the row title, passed to ComplexHeatmap::Heatmap.
+#'   Default is ""
+#' @param column_title Character string for the column title, passed to ComplexHeatmap::Heatmap.
+#'   Default is ""
+#' @param filterSig Logical indicating whether to filter features based on significance
+#'   thresholds. Default is TRUE
+#' @param propCutoff Numeric threshold for minimum proportion of cells expressing a feature.
+#'   Values below this are set to 0. Default is 0.1
+#' @param color Character string specifying the color for high expression values.
+#'   Default is "red3"
+#' @param ... Additional arguments passed to ComplexHeatmap::Heatmap
+#'
+#' @return A ComplexHeatmap object with bubble plot visualization
 #' @export
 #' @importFrom grid grid.circle
 #' @importFrom ComplexHeatmap Heatmap Legend gt_render
 #'
 #' @examples
+#' \dontrun{
+#' # Get marker features
+#' markerGenes <- getMarkerFeatures(
+#'   ArchRProj = projHeme,
+#'   useMatrix = "GeneScoreMatrix",
+#'   groupBy = "Clusters"
+#' )
+#'
+#' # Get mean and proportion matrices
+#' meanMat <- getMeanMtrx(projHeme, useMatrix = "GeneScoreMatrix", groupBy = "Clusters")
+#' propMat <- getNonZeroProp(projHeme, name = "GeneScoreMatrix", groupBy = "Clusters")
+#'
+#' # Create bubble plot
+#' bubblePlot(
+#'   propMtrx = propMat,
+#'   meanMtrx = meanMat,
+#'   markerSet = markerGenes,
+#'   useFeatures = c("CD34", "CD3D", "CD8A", "CD19"),
+#'   Log2FC = 1,
+#'   FDR = 0.01
+#' )
+#' }
 bubblePlot <- function(propMtrx = NULL,
                        meanMtrx = NULL,
                        markerSet = NULL,

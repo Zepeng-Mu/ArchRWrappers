@@ -5,16 +5,32 @@
 
 #' Get mean matrix for each group from an ArchR project
 #'
-#' @param ArchRProj An ArchR project
-#' @param name Name of matrix to use, default is GeneScoreMatrix
-#' @param groupBy The variable in cellColData used to group cells, default is Clusters
-#' @param useSeqnames Chromosomes to include in output matrix, default is chr1-22 and chrX
-#' @param threads Number of threads to use, default is 4
+#' This function calculates the mean value of each feature (gene or peak) for each
+#' group of cells in an ArchR project, returning a feature-by-group matrix.
 #'
-#' @return A feature-by-group sparse matrix
+#' @param ArchRProj An ArchR project object
+#' @param useMatrix Character string specifying which matrix to use from the ArchR project.
+#'   Default is NULL (must be specified)
+#' @param groupBy Character string specifying the variable in cellColData used to group cells.
+#'   Default is "Sample"
+#' @param scaleTo Numeric value to scale the matrix to. Default is NULL
+#' @param select Character vector to select specific groups. Default is NULL (all groups)
+#' @param ignoreCase Logical indicating whether to ignore case when selecting groups.
+#'   Default is TRUE
+#' @param threads Integer specifying the number of threads to use. Default is 4
+#'
+#' @return A numeric matrix with features as rows and groups as columns, containing
+#'   the mean values for each feature in each group
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' meanMat <- getMeanMtrx(
+#'   ArchRProj = projHeme,
+#'   useMatrix = "GeneScoreMatrix",
+#'   groupBy = "Clusters"
+#' )
+#' }
 getMeanMtrx <- function(ArchRProj = NULL,
                         useMatrix = NULL,
                         groupBy = "Sample",
@@ -50,17 +66,32 @@ getMeanMtrx <- function(ArchRProj = NULL,
 
 #' Get sum matrix for each group from an ArchR project
 #'
-#' @param ArchRProj An ArchR project
-#' @param name Name of matrix to use, default is PeakMatrix
-#' @param groupBy The variable in cellColData used to group cells, default is Clusters
-#' @param useSeqnames Chromosomes to include in output matrix, default is chr1-22 and chrX
-#' @param threads Number of threads to use, default is 4
-#' @param featureType String indicates whether matrix rows are `gene` or `peak`, or anything else
+#' This function calculates the sum of values for each feature (gene or peak) across
+#' all cells in each group, returning a feature-by-group matrix.
 #'
-#' @return A feature-by-group sparse matrix
+#' @param ArchRProj An ArchR project object
+#' @param name Character string specifying which matrix to use from the ArchR project.
+#'   Default is "PeakMatrix"
+#' @param groupBy Character string specifying the variable in cellColData used to group cells.
+#'   Default is "Clusters"
+#' @param useSeqnames Character vector of chromosome names to include in output matrix.
+#'   Default is c("chr" %&% 1:22, "chrX")
+#' @param featureType Character string indicating whether matrix rows are "gene" or "peak".
+#'   Default is automatically determined based on the matrix name
+#' @param threads Integer specifying the number of threads to use. Default is 4
+#'
+#' @return A numeric matrix with features as rows and groups as columns, containing
+#'   the sum of values for each feature in each group
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' sumMat <- getSumMtrx(
+#'   ArchRProj = projHeme,
+#'   name = "PeakMatrix",
+#'   groupBy = "Clusters"
+#' )
+#' }
 getSumMtrx <- function(ArchRProj = NULL,
                        name = "PeakMatrix",
                        groupBy = "Clusters",
@@ -92,18 +123,33 @@ getSumMtrx <- function(ArchRProj = NULL,
   return(sumMtrx)
 }
 
-#' Get Non-zero proportion from ArchR project
+#' Get non-zero proportion matrix from an ArchR project
 #'
-#' @param ArchRProj An ArchR project
-#' @param name Name of matrix to use, default is GeneScoreMatrix
-#' @param groupBy The variable in cellColData used to group cells, default is Clusters
-#' @param useSeqnames Chromosomes to include in output matrix, default is chr1-22 and chrX
-#' @param threads Number of threads to use, default is 4
+#' This function calculates the proportion of cells in each group that have non-zero
+#' values for each feature (gene or peak), useful for identifying features with
+#' sparse expression patterns.
 #'
-#' @return
+#' @param ArchRProj An ArchR project object
+#' @param name Character string specifying which matrix to use from the ArchR project.
+#'   Default is "GeneScoreMatrix"
+#' @param groupBy Character string specifying the variable in cellColData used to group cells.
+#'   Default is "Clusters"
+#' @param useSeqnames Character vector of chromosome names to include in output matrix.
+#'   Default is c("chr" %&% 1:22, "chrX")
+#' @param threads Integer specifying the number of threads to use. Default is 14
+#'
+#' @return A numeric matrix with features as rows and groups as columns, containing
+#'   the proportion of non-zero values (0 to 1) for each feature in each group
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' propMat <- getNonZeroProp(
+#'   ArchRProj = projHeme,
+#'   name = "GeneScoreMatrix",
+#'   groupBy = "Clusters"
+#' )
+#' }
 getNonZeroProp <- function(ArchRProj = NULL,
                            name = "GeneScoreMatrix",
                            groupBy = "Clusters",
