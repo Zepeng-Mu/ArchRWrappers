@@ -1,5 +1,8 @@
 # ArchRWrappers
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange)](https://www.tidyverse.org/lifecycle/#experimental)
+
 Utility wrappers that smooth common ArchR single-cell ATAC-seq workflows, including reduced-dimension management and group-level summaries to Seurat bridge integration and plotting helpers.
 
 ## Feature Highlights
