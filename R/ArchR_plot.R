@@ -62,9 +62,17 @@ my_theme <- function(...) {
 #'   discrete = TRUE
 #' )
 #' }
-plotRedDim <- function(mtrx, maxDim = 30, color = NULL, discrete = T, nCol = NULL) {
+plotRedDim <- function(
+  mtrx,
+  maxDim = 30,
+  color = NULL,
+  discrete = T,
+  nCol = NULL
+) {
   if (maxDim > ncol(mtrx)) {
-    stop("maxDim cannot be larger be larger than the number of factors (column numbers) in mtrx")
+    stop(
+      "maxDim cannot be larger be larger than the number of factors (column numbers) in mtrx"
+    )
   }
 
   if (is.null(nCol)) {

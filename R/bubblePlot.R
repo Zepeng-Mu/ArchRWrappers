@@ -58,19 +58,21 @@
 #'   FDR = 0.01
 #' )
 #' }
-bubblePlot <- function(propMtrx = NULL,
-                       meanMtrx = NULL,
-                       markerSet = NULL,
-                       useFeatures = NULL,
-                       labelFeatures = useFeatures,
-                       Log2FC = 1,
-                       FDR = 0.05,
-                       row_title = "",
-                       column_title = "",
-                       filterSig = T,
-                       propCutoff = 0.1,
-                       color = "red3",
-                       ...) {
+bubblePlot <- function(
+  propMtrx = NULL,
+  meanMtrx = NULL,
+  markerSet = NULL,
+  useFeatures = NULL,
+  labelFeatures = useFeatures,
+  Log2FC = 1,
+  FDR = 0.05,
+  row_title = "",
+  column_title = "",
+  filterSig = T,
+  propCutoff = 0.1,
+  color = "red3",
+  ...
+) {
   if (filterSig) {
     fdrMtrx <- assay(markerSet, "FDR") %>% as.matrix()
     rownames(fdrMtrx) <- mcols(markerSet)$name
@@ -103,7 +105,10 @@ bubblePlot <- function(propMtrx = NULL,
       x = x,
       y = y,
       r = sqrt(pindex(propMtrx, i, j)) * 0.5 * min(unit.c(width, height)),
-      gp = gpar(fill = col_fun(pindex(meanMtrx, i, j)), col = ifelse(pindex(sigMtrx, i, j), "black", "white"))
+      gp = gpar(
+        fill = col_fun(pindex(meanMtrx, i, j)),
+        col = ifelse(pindex(sigMtrx, i, j), "black", "white")
+      )
     )
   }
 
@@ -122,25 +127,78 @@ bubblePlot <- function(propMtrx = NULL,
     labels = as.character(seq(0.2, 1, 0.2)),
     title = "Non-zero\nProportion",
     title_gp = gpar(fontface = "plain"),
-    grid_width = min(component_width(hp, "heatmap_body") / ncol(meanMtrx), component_height(hp, "heatmap_body") / nrow(meanMtrx)),
+    grid_width = min(
+      component_width(hp, "heatmap_body") / ncol(meanMtrx),
+      component_height(hp, "heatmap_body") / nrow(meanMtrx)
+    ),
     graphics = list(
-      function(x, y, w, h) grid.circle(x, y, r = sqrt(0.05) * min(unit.c(w, h)), gp = gpar(fill = "black", col = "white")),
-      function(x, y, w, h) grid.circle(x, y, r = sqrt(0.1) * min(unit.c(w, h)), gp = gpar(fill = "black", col = "white")),
-      function(x, y, w, h) grid.circle(x, y, r = sqrt(0.15) * min(unit.c(w, h)), gp = gpar(fill = "black", col = "white")),
-      function(x, y, w, h) grid.circle(x, y, r = sqrt(0.2) * min(unit.c(w, h)), gp = gpar(fill = "black", col = "white")),
-      function(x, y, w, h) grid.circle(x, y, r = sqrt(0.25) * min(unit.c(w, h)), gp = gpar(fill = "black", col = "white"))
+      function(x, y, w, h) {
+        grid.circle(
+          x,
+          y,
+          r = sqrt(0.05) * min(unit.c(w, h)),
+          gp = gpar(fill = "black", col = "white")
+        )
+      },
+      function(x, y, w, h) {
+        grid.circle(
+          x,
+          y,
+          r = sqrt(0.1) * min(unit.c(w, h)),
+          gp = gpar(fill = "black", col = "white")
+        )
+      },
+      function(x, y, w, h) {
+        grid.circle(
+          x,
+          y,
+          r = sqrt(0.15) * min(unit.c(w, h)),
+          gp = gpar(fill = "black", col = "white")
+        )
+      },
+      function(x, y, w, h) {
+        grid.circle(
+          x,
+          y,
+          r = sqrt(0.2) * min(unit.c(w, h)),
+          gp = gpar(fill = "black", col = "white")
+        )
+      },
+      function(x, y, w, h) {
+        grid.circle(
+          x,
+          y,
+          r = sqrt(0.25) * min(unit.c(w, h)),
+          gp = gpar(fill = "black", col = "white")
+        )
+      }
     )
   )
 
   lgdSig <- Legend(
-    title = gt_render(as.character(str_glue("Log<sub>2</sub>FC > {Log2FC} &<br>FDR < {FDR}"))),
-    at = 1, labels = "", title_gp = gpar(fontface = "plain"),
+    title = gt_render(as.character(str_glue(
+      "Log<sub>2</sub>FC > {Log2FC} &<br>FDR < {FDR}"
+    ))),
+    at = 1,
+    labels = "",
+    title_gp = gpar(fontface = "plain"),
     graphics = list(
-      function(x, y, w, h) grid.circle(x, y, r = 0.4 * min(unit.c(w, h)), gp = gpar(col = "black", fill = "white"))
+      function(x, y, w, h) {
+        grid.circle(
+          x,
+          y,
+          r = 0.4 * min(unit.c(w, h)),
+          gp = gpar(col = "black", fill = "white")
+        )
+      }
     )
   )
 
   lgdList <- list(lgdFill, lgdSig)
 
-  return(draw(hp, annotation_legend_list = lgdList, heatmap_legend_side = "bottom"))
+  return(draw(
+    hp,
+    annotation_legend_list = lgdList,
+    heatmap_legend_side = "bottom"
+  ))
 }

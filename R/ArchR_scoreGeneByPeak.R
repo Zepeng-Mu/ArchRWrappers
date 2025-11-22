@@ -89,19 +89,50 @@ scoreGeneByPeak <- function(
   ArchR:::.validInput(input = genes, name = "genes", valid = c("GRanges"))
   ArchR:::.validInput(input = peaks, name = "peaks", valid = c("GRanges"))
   ArchR:::.validInput(input = scoreMat, name = "scoreMat", valid = c("matrix"))
-  ArchR:::.validInput(input = geneModel, name = "geneModel", valid = c("character"))
-  ArchR:::.validInput(input = extendUpstream, name = "extendUpstream", valid = c("integer"))
-  ArchR:::.validInput(input = extendDownstream, name = "extendDownstream", valid = c("integer"))
-  ArchR:::.validInput(input = useGeneBoundaries, name = "useGeneBoundaries", valid = c("boolean"))
-  ArchR:::.validInput(input = excludeChr, name = "excludeChr", valid = c("character", "null"))
-  ArchR:::.validInput(input = blacklist, name = "blacklist", valid = c("GRanges", "null"))
+  ArchR:::.validInput(
+    input = geneModel,
+    name = "geneModel",
+    valid = c("character")
+  )
+  ArchR:::.validInput(
+    input = extendUpstream,
+    name = "extendUpstream",
+    valid = c("integer")
+  )
+  ArchR:::.validInput(
+    input = extendDownstream,
+    name = "extendDownstream",
+    valid = c("integer")
+  )
+  ArchR:::.validInput(
+    input = useGeneBoundaries,
+    name = "useGeneBoundaries",
+    valid = c("boolean")
+  )
+  ArchR:::.validInput(
+    input = excludeChr,
+    name = "excludeChr",
+    valid = c("character", "null")
+  )
+  ArchR:::.validInput(
+    input = blacklist,
+    name = "blacklist",
+    valid = c("GRanges", "null")
+  )
 
-  if (inherits(mcols(genes)$symbol, "list") | inherits(mcols(genes)$symbol, "SimpleList")) {
-    stop("Found a list in genes symbol! This is an incorrect format. Please correct your genes!")
+  if (
+    inherits(mcols(genes)$symbol, "list") |
+      inherits(mcols(genes)$symbol, "SimpleList")
+  ) {
+    stop(
+      "Found a list in genes symbol! This is an incorrect format. Please correct your genes!"
+    )
   }
 
   if (is.null(peaks)) {
-    stop("peaks should contain a 'name' column that can be matched to rownames in scoreMat!")
+    stop(
+      "peaks should contain a 'name' column that can be matched to rownames in scoreMat!"
+    )
   }
 
   geneRegions <- genes[BiocGenerics::which(seqnames(genes) %bcni% excludeChr)]
@@ -115,14 +146,22 @@ scoreGeneByPeak <- function(
     geneRegions$geneEnd <- start(resize(geneRegions, 1, "end"))
     geneRegions <- resize(geneRegions, 1, "start")
     if (extendTSS) {
-      geneRegions <- extendGR(gr = geneRegions, upstream = geneUpstream, downstream = geneDownstream)
+      geneRegions <- extendGR(
+        gr = geneRegions,
+        upstream = geneUpstream,
+        downstream = geneDownstream
+      )
     }
     geneRegions$geneWeight <- geneScaleFactor
   } else {
     distMethod <- "GeneBody"
     geneRegions$geneStart <- start(resize(geneRegions, 1, "start"))
     geneRegions$geneEnd <- start(resize(geneRegions, 1, "end"))
-    geneRegions <- extendGR(gr = geneRegions, upstream = geneUpstream, downstream = geneDownstream)
+    geneRegions <- extendGR(
+      gr = geneRegions,
+      upstream = geneUpstream,
+      downstream = geneDownstream
+    )
     m <- 1 / width(geneRegions)
     geneRegions$geneWeight <- 1 + m * (geneScaleFactor - 1) / (max(m) - min(m))
   }
@@ -148,149 +187,190 @@ scoreGeneByPeak <- function(
   peaks <- peaks[peaks$name %in% peaksBoth]
   scoreMat <- scoreMat[peaksBoth, ]
 
-  outMat <- ArchR:::.safelapply(seq_along(geneRegions), function(z) {
-    chrOutMat <- tryCatch(
-      {
-        # Get Gene Starts
-        geneRegionz <- geneRegions[[z]]
-        geneRegionz <- geneRegionz[order(geneRegionz$idx)]
-        chrz <- paste0(unique(seqnames(geneRegionz)))
+  outMat <- ArchR:::.safelapply(
+    seq_along(geneRegions),
+    function(z) {
+      chrOutMat <- tryCatch(
+        {
+          # Get Gene Starts
+          geneRegionz <- geneRegions[[z]]
+          geneRegionz <- geneRegionz[order(geneRegionz$idx)]
+          chrz <- paste0(unique(seqnames(geneRegionz)))
 
-        message(str_glue("Running {chrz}...\n"))
+          message(str_glue("Running {chrz}...\n"))
 
-        # Peaks by Chr
-        chrPeaks <- peaks[seqnames(peaks) == chrz]
+          # Peaks by Chr
+          chrPeaks <- peaks[seqnames(peaks) == chrz]
 
-        gc()
+          gc()
 
-        # Get peak by K matrix
-        chrScoreMat <- scoreMat[chrPeaks$name, ]
+          # Get peak by K matrix
+          chrScoreMat <- scoreMat[chrPeaks$name, ]
 
-        # Time to Overlap Gene Windows
-        if (useGeneBoundaries) {
-          geneStartz <- start(resize(geneRegionz, 1, "start"))
-          geneEndz <- start(resize(geneRegionz, 1, "end"))
+          # Time to Overlap Gene Windows
+          if (useGeneBoundaries) {
+            geneStartz <- start(resize(geneRegionz, 1, "start"))
+            geneEndz <- start(resize(geneRegionz, 1, "end"))
 
-          pminGene <- pmin(geneStartz, geneEndz)
-          pmaxGene <- pmax(geneStartz, geneEndz)
+            pminGene <- pmin(geneStartz, geneEndz)
+            pmaxGene <- pmax(geneStartz, geneEndz)
 
-          idxMinus <- BiocGenerics::which(strand(geneRegionz) != "-")
+            idxMinus <- BiocGenerics::which(strand(geneRegionz) != "-")
 
-          pReverse <- rep(max(extendDownstream), length(pminGene))
-          pReverse[idxMinus] <- rep(max(extendUpstream), length(idxMinus))
+            pReverse <- rep(max(extendDownstream), length(pminGene))
+            pReverse[idxMinus] <- rep(max(extendUpstream), length(idxMinus))
 
-          pReverseMin <- rep(min(extendDownstream), length(pminGene))
-          pReverseMin[idxMinus] <- rep(min(extendUpstream), length(idxMinus))
+            pReverseMin <- rep(min(extendDownstream), length(pminGene))
+            pReverseMin[idxMinus] <- rep(min(extendUpstream), length(idxMinus))
 
-          pForward <- rep(max(extendUpstream), length(pminGene))
-          pForward[idxMinus] <- rep(max(extendDownstream), length(idxMinus))
+            pForward <- rep(max(extendUpstream), length(pminGene))
+            pForward[idxMinus] <- rep(max(extendDownstream), length(idxMinus))
 
-          pForwardMin <- rep(min(extendUpstream), length(pminGene))
-          pForwardMin[idxMinus] <- rep(min(extendDownstream), length(idxMinus))
+            pForwardMin <- rep(min(extendUpstream), length(pminGene))
+            pForwardMin[idxMinus] <- rep(
+              min(extendDownstream),
+              length(idxMinus)
+            )
 
-          ################################################################
-          # We will test when genes pass by another gene promoter
-          ################################################################
+            ################################################################
+            # We will test when genes pass by another gene promoter
+            ################################################################
 
-          # Start of Range is based on the max observed gene ranged <- direction
-          s <- pmax(
-            c(1, pmaxGene[-length(pmaxGene)] + peakWidth),
-            pminGene - pReverse
-          )
-          s <- pmin(pminGene - pReverseMin, s)
+            # Start of Range is based on the max observed gene ranged <- direction
+            s <- pmax(
+              c(1, pmaxGene[-length(pmaxGene)] + peakWidth),
+              pminGene - pReverse
+            )
+            s <- pmin(pminGene - pReverseMin, s)
 
-          # End of Range is based on the max observed gene ranged -> direction
-          e <- pmin(
-            c(pminGene[-1] - peakWidth, pmaxGene[length(pmaxGene)] + pForward[length(pmaxGene)]),
-            pmaxGene + pForward
-          )
-          e <- pmax(pmaxGene + pForwardMin, e)
+            # End of Range is based on the max observed gene ranged -> direction
+            e <- pmin(
+              c(
+                pminGene[-1] - peakWidth,
+                pmaxGene[length(pmaxGene)] + pForward[length(pmaxGene)]
+              ),
+              pmaxGene + pForward
+            )
+            e <- pmax(pmaxGene + pForwardMin, e)
 
-          extendedGeneRegion <- IRanges(start = s, end = e)
+            extendedGeneRegion <- IRanges(start = s, end = e)
 
-          idx1 <- which(pminGene - pReverseMin < start(extendedGeneRegion))
-          if (length(idx1) > 0) {
-            stop("Error in gene boundaries minError")
+            idx1 <- which(pminGene - pReverseMin < start(extendedGeneRegion))
+            if (length(idx1) > 0) {
+              stop("Error in gene boundaries minError")
+            }
+
+            idx2 <- which(pmaxGene + pForwardMin > end(extendedGeneRegion))
+            if (length(idx2) > 0) {
+              stop("Error in gene boundaries maxError")
+            }
+
+            rm(
+              s,
+              e,
+              pReverse,
+              pReverseMin,
+              pForward,
+              pForwardMin,
+              geneStartz,
+              geneEndz,
+              pminGene,
+              pmaxGene
+            )
+          } else {
+            extendedGeneRegion <- ranges(suppressWarnings(extendGR(
+              geneRegionz,
+              upstream = max(extendUpstream),
+              downstream = max(extendDownstream)
+            )))
           }
 
-          idx2 <- which(pmaxGene + pForwardMin > end(extendedGeneRegion))
-          if (length(idx2) > 0) {
-            stop("Error in gene boundaries maxError")
-          }
+          tmp <- suppressWarnings(IRanges::findOverlaps(
+            extendedGeneRegion,
+            ranges(chrPeaks)
+          ))
+          x <- distance(geneRegionz[queryHits(tmp)], chrPeaks[subjectHits(tmp)])
 
-          rm(s, e, pReverse, pReverseMin, pForward, pForwardMin, geneStartz, geneEndz, pminGene, pmaxGene)
-        } else {
-          extendedGeneRegion <- ranges(suppressWarnings(extendGR(geneRegionz, upstream = max(extendUpstream), downstream = max(extendDownstream))))
-        }
+          # Determine Sign for Distance relative to strand (Directionality determined based on dist from gene start)
+          isMinus <- BiocGenerics::which(strand(geneRegionz) == "-")
+          signDist <- sign(
+            start(chrPeaks)[subjectHits(tmp)] -
+              start(resize(geneRegionz, 1, "start"))[queryHits(tmp)]
+          )
+          signDist[isMinus] <- signDist[isMinus] * -1
 
-        tmp <- suppressWarnings(IRanges::findOverlaps(extendedGeneRegion, ranges(chrPeaks)))
-        x <- distance(geneRegionz[queryHits(tmp)], chrPeaks[subjectHits(tmp)])
+          # Correct the orientation for the distance!
+          x <- x * signDist
 
-        # Determine Sign for Distance relative to strand (Directionality determined based on dist from gene start)
-        isMinus <- BiocGenerics::which(strand(geneRegionz) == "-")
-        signDist <- sign(start(chrPeaks)[subjectHits(tmp)] - start(resize(geneRegionz, 1, "start"))[queryHits(tmp)])
-        signDist[isMinus] <- signDist[isMinus] * -1
+          # Evaluate Input Model
+          x <- eval(parse(text = geneModel))
 
-        # Correct the orientation for the distance!
-        x <- x * signDist
+          # Get Gene Weights Related to Gene Width
+          x <- x * mcols(geneRegionz)$geneWeight[queryHits(tmp)]
 
-        # Evaluate Input Model
-        x <- eval(parse(text = geneModel))
-
-        # Get Gene Weights Related to Gene Width
-        x <- x * mcols(geneRegionz)$geneWeight[queryHits(tmp)]
-
-        # Remove Blacklisted Tiles!
-        if (!is.null(blacklist)) {
-          if (length(blacklist) > 0) {
-            blacklistz <- blacklist[[chrz]]
-            if (is.null(blacklistz) | length(blacklistz) > 0) {
-              peaksBlacklist <- 1 * (!overlapsAny(chrPeaks, blacklistz))
-              if (sum(peaksBlacklist == 0) > 0) {
-                x <- x * peaksBlacklist[subjectHits(tmp)] # Multiply Such That All Blacklisted Tiles weight is now 0!
+          # Remove Blacklisted Tiles!
+          if (!is.null(blacklist)) {
+            if (length(blacklist) > 0) {
+              blacklistz <- blacklist[[chrz]]
+              if (is.null(blacklistz) | length(blacklistz) > 0) {
+                peaksBlacklist <- 1 * (!overlapsAny(chrPeaks, blacklistz))
+                if (sum(peaksBlacklist == 0) > 0) {
+                  x <- x * peaksBlacklist[subjectHits(tmp)] # Multiply Such That All Blacklisted Tiles weight is now 0!
+                }
               }
             }
           }
+
+          # Creating Sparse Matrix
+          tmp <- Matrix::sparseMatrix(
+            i = queryHits(tmp),
+            j = subjectHits(tmp),
+            x = x,
+            dims = c(length(geneRegionz), nrow(chrScoreMat)),
+            dimnames = list(geneRegionz$symbol, rownames(chrScoreMat))
+          )
+
+          # Remove empty genes and peaks
+          tmp <- tmp[
+            sparseMatrixStats::rowSums2(tmp) > 0,
+            sparseMatrixStats::colSums2(tmp) > 0
+          ]
+
+          if (method == "mean") {
+            cntNonZero <- ncol(tmp) -
+              sparseMatrixStats::rowCounts(tmp, value = 0)
+            tmp[cntNonZero > 0, ] <- tmp[cntNonZero > 0, ] /
+              cntNonZero[cntNonZero > 0]
+          }
+
+          # Calculate Gene Scores
+          chrScoreMat <- tmp %*% chrScoreMat[colnames(tmp), ]
+
+          # Clean Memory
+          rm(isMinus, signDist, extendedGeneRegion, chrPeaks, tmp)
+          gc()
+
+          return(chrScoreMat)
+        },
+        error = function(e) {
+          errorList <- list(
+            geneRegions = geneRegions,
+            blacklist = blacklist,
+            chr = chrz,
+            chrScoreMat = if (exists("chrScoreMat", inherits = FALSE)) {
+              chrScoreMat
+            } else {
+              "chrScoreMat"
+            }
+          )
         }
+      )
 
-        # Creating Sparse Matrix
-        tmp <- Matrix::sparseMatrix(
-          i = queryHits(tmp),
-          j = subjectHits(tmp),
-          x = x,
-          dims = c(length(geneRegionz), nrow(chrScoreMat)),
-          dimnames = list(geneRegionz$symbol, rownames(chrScoreMat))
-        )
-
-        # Remove empty genes and peaks
-        tmp <- tmp[sparseMatrixStats::rowSums2(tmp) > 0, sparseMatrixStats::colSums2(tmp) > 0]
-
-        if (method == "mean") {
-          cntNonZero <- ncol(tmp) - sparseMatrixStats::rowCounts(tmp, value = 0)
-          tmp[cntNonZero > 0, ] <- tmp[cntNonZero > 0, ] / cntNonZero[cntNonZero > 0]
-        }
-
-        # Calculate Gene Scores
-        chrScoreMat <- tmp %*% chrScoreMat[colnames(tmp), ]
-
-        # Clean Memory
-        rm(isMinus, signDist, extendedGeneRegion, chrPeaks, tmp)
-        gc()
-
-        return(chrScoreMat)
-      },
-      error = function(e) {
-        errorList <- list(
-          geneRegions = geneRegions,
-          blacklist = blacklist,
-          chr = chrz,
-          chrScoreMat = if (exists("chrScoreMat", inherits = FALSE)) chrScoreMat else "chrScoreMat"
-        )
-      }
-    )
-
-    return(errorList)
-  }, threads = subThreads) %>% Reduce(rbind, .)
+      return(errorList)
+    },
+    threads = subThreads
+  ) %>%
+    Reduce(rbind, .)
 
   # Clean Memory
   rm(genes)

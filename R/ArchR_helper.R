@@ -41,16 +41,18 @@
 #'   dimsToUse = 1:30
 #' )
 #' }
-addReducedMNN <- function(ArchRProj,
-                          corCutOff = 0.75,
-                          reducedDims = "IterativeLSI",
-                          name = "reducedMNN",
-                          scaleDims = T,
-                          scaleDimsAfter = NA,
-                          groupBy,
-                          k = 15,
-                          dimsToUse,
-                          ...) {
+addReducedMNN <- function(
+  ArchRProj,
+  corCutOff = 0.75,
+  reducedDims = "IterativeLSI",
+  name = "reducedMNN",
+  scaleDims = T,
+  scaleDimsAfter = NA,
+  groupBy,
+  k = 15,
+  dimsToUse,
+  ...
+) {
   message(str_glue("Getting {reducedDims}...\n"))
   origRedDim <- getReducedDims(
     ArchRProj,
@@ -68,7 +70,6 @@ addReducedMNN <- function(ArchRProj,
     scaleDims = scaleDims,
     returnMatrix = F
   )
-
 
   origFeatures <- origRedDimObj[[grep("Features", names(origRedDimObj))]]
 
@@ -190,17 +191,23 @@ ArchR2sce <- function(
   threads = 4
 ) {
   message(str_glue("Getting {useMatrix} from ArchR project...\n"))
-  projMtrx <- getMatrixFromProject(ArchRProj,
+  projMtrx <- getMatrixFromProject(
+    ArchRProj,
     useMatrix = useMatrix,
     useSeqnames = useSeqnames,
-    binarize = binarize, threads = threads
+    binarize = binarize,
+    threads = threads
   )
 
   assayList <- list(assay(projMtrx))
   names(assayList) <- targetAssay
 
   rdList <- lapply(1:length(reducedDims), function(rd) {
-    tmpRd <- getReducedDims(ArchRProj, reducedDims = reducedDims[rd], scaleDims = scaleDims[rd])
+    tmpRd <- getReducedDims(
+      ArchRProj,
+      reducedDims = reducedDims[rd],
+      scaleDims = scaleDims[rd]
+    )
     tmpRd <- tmpRd[colnames(projMtrx), ]
     return(tmpRd)
   })
