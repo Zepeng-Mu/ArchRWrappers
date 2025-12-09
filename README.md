@@ -46,14 +46,6 @@ proj <- addReducedMNN(
 	name = "MNN",
 	groupBy = "Sample"
 )
-
-# Compare embeddings side-by-side with consistent aesthetics
-plotRedDim(
-	ArchRProj = proj,
-	reducedDims = c("IterativeLSI", "MNN"),
-	colorBy = c("Sample", "Clusters"),
-	savePlot = FALSE
-)
 ```
 
 ### 2. Convert to SingleCellExperiment for Bioconductor tools
