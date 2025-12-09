@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange)](https://www.tidyverse.org/lifecycle/#experimental)
 
-> [Note]
+> [!Note]
 > This README is drafted by AI and verified by human authors. Please report any issues.
 
 Utility wrappers that smooth common ArchR single-cell ATAC-seq workflows, including reduced-dimension management and group-level summaries to Seurat bridge integration and plotting helpers.
