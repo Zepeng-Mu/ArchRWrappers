@@ -87,7 +87,8 @@ bubblePlot(
 
 ### 4. Bridge to RNA references with Seurat
 
-This function has not been used or verified.
+> [!Warning]
+> This function has not been used or verified.
 
 ```r
 proj <- addGeneBridgeIntegrationMatrix(
